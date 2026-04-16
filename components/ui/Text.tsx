@@ -49,7 +49,6 @@ const variantStyles: Record<TextVariant, TextStyle> = {
 		fontSize: textTheme.size.xl,
 		lineHeight: textTheme.lineHeight.xl,
 		borderBottomColor: baseColors.border,
-		paddingBottom: space.sm,
 	},
 	h3: {
 		fontFamily: textTheme.family.bold,
