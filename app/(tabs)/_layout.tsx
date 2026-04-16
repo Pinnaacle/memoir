@@ -1,22 +1,26 @@
 import { Tabs } from "expo-router";
 import { CalendarDays, Heart, House, Image, Star } from "lucide-react-native";
+import { baseColors, sectionColors } from "../../theme/colors";
+import { text } from "../../theme/type";
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: "#1a1a1a" },
-        headerTintColor: "#f5f0ec",
+        headerStyle: { backgroundColor: baseColors.bg },
+        headerShadowVisible: false,
+        headerTintColor: baseColors.text,
         headerTitleStyle: {
-          color: "#ff2d78",
-          fontSize: 28,
-          fontWeight: "700",
+          color: sectionColors.moments,
+          fontSize: text.size.title,
+          fontFamily: text.family.heading,
         },
         headerTitleAlign: "left",
-        sceneStyle: { backgroundColor: "#1a1a1a" },
-        tabBarActiveTintColor: "#ff2d78",
-        tabBarInactiveTintColor: "#f5f0ec",
+        sceneStyle: { backgroundColor: baseColors.bg },
+        tabBarActiveTintColor: sectionColors.moments,
+        tabBarInactiveTintColor: baseColors.textSoft,
         tabBarLabelStyle: {
+          fontFamily: text.family.label,
           fontSize: 11,
           marginTop: -2,
           marginBottom: 8,
@@ -34,6 +38,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Timeline",
+          tabBarActiveTintColor: sectionColors.timeline,
           tabBarIcon: ({ color }) => <House color={color} size={24} />,
         }}
       />
@@ -41,20 +46,23 @@ export default function TabLayout() {
         name="moments"
         options={{
           title: "Moments",
+          tabBarActiveTintColor: sectionColors.moments,
           tabBarIcon: ({ color }) => <Heart color={color} size={24} />,
         }}
       />
       <Tabs.Screen
-        name="dates"
+        name="events"
         options={{
-          title: "Dates",
+          title: "Events",
+          tabBarActiveTintColor: sectionColors.events,
           tabBarIcon: ({ color }) => <CalendarDays color={color} size={24} />,
         }}
       />
       <Tabs.Screen
-        name="milestones"
+        name="chapters"
         options={{
-          title: "Milestones",
+          title: "Chapters",
+          tabBarActiveTintColor: sectionColors.chapters,
           tabBarIcon: ({ color }) => <Star color={color} size={24} />,
         }}
       />
@@ -62,6 +70,7 @@ export default function TabLayout() {
         name="memories"
         options={{
           title: "Memories",
+          tabBarActiveTintColor: sectionColors.memories,
           tabBarIcon: ({ color }) => <Image color={color} size={24} />,
         }}
       />
