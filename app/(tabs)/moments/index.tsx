@@ -1,31 +1,52 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text } from "@/components/ui/Text";
+import { baseColors, sectionColors } from "@/theme/colors";
+import { space } from "@/theme/space";
+import { text as textTheme } from "@/theme/type";
+import { Link } from "expo-router";
+import { Plus } from "lucide-react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
-export default function MemoriesScreen() {
+export default function MomentsScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Memories</Text>
-      <Text style={styles.text}>Scaffold page for memory collections.</Text>
+      <Text style={styles.centerText}>Moments</Text>
+
+      <Link href="/moments/new" asChild>
+        <Pressable accessibilityRole="button" style={styles.createButton}>
+          <Plus color={baseColors.bg} size={28} strokeWidth={2.4} />
+        </Pressable>
+      </Link>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#1a1a1a",
-    justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    flex: 1,
+    backgroundColor: baseColors.bg,
+    justifyContent: "center",
   },
-  title: {
-    color: "#f5f0ec",
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 10,
+  centerText: {
+    color: sectionColors.moments,
+    fontFamily: textTheme.family.heading,
+    fontSize: textTheme.size.title,
+    lineHeight: textTheme.lineHeight.title,
   },
-  text: {
-    color: "#b8b0a8",
-    fontSize: 16,
-    textAlign: "center",
+  createButton: {
+    alignItems: "center",
+    backgroundColor: sectionColors.moments,
+    borderRadius: 999,
+    bottom: space.xxl,
+    height: 60,
+    width: 60,
+    justifyContent: "center",
+    position: "absolute",
+    right: space.xl,
+    shadowColor: baseColors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    elevation: 4,
   },
 });
