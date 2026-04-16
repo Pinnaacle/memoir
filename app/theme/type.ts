@@ -1,4 +1,4 @@
-export const type = {
+export const text = {
   family: {
     heading: "",
     body: "",

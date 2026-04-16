@@ -1,18 +1,14 @@
 export const baseColors = {
-  bg: "#000",
-  surface: "#000",
-  surfaceSoft: "#000",
-  text: "#000",
-  textMuted: "#000",
-  textSoft: "#000",
-  border: "#000",
-  overlay: "#000",
+  bg: "#1a1a1a",
+  text: "#f5f0ec",
+  textSoft: "#b8b0a8",
+  textMuted: "#6b6560",
 };
 
 export const sectionColors = {
-  timeline: "#000",
-  moments: "#000",
-  dates: "#000",
-  milestones: "#000",
-  memories: "#000",
-} as const;
+  timeline: "#a0d4a6",
+  moments: "#ff2d78",
+  events: "#a89bff",
+  chapters: "#ffd166",
+  memories: "#97cef5",
+};
