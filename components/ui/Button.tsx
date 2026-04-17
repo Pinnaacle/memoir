@@ -4,13 +4,13 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Text } from './Text';
 
 interface ButtonProps extends React.ComponentProps<typeof Pressable> {
-  title: string;
+  label: string;
   variant?: 'default' | 'round';
   color?: string;
 }
 
 export default function Button({
-  title,
+  label,
   variant = 'default',
   color,
   ...rest
@@ -20,7 +20,7 @@ export default function Button({
       {variant === 'round' ? (
         <Plus color={baseColors.bg} size={28} />
       ) : (
-        <Text style={styles.text}>{title}</Text>
+        <Text style={styles.text}>{label}</Text>
       )}
     </Pressable>
   );
