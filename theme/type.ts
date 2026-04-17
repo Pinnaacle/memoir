@@ -1,22 +1,25 @@
 export const text = {
-  family: {
-    heading: "PlusJakartaSans_700Bold",
-    body: "PlusJakartaSans_500Medium",
-    bodyStrong: "PlusJakartaSans_600SemiBold",
-    label: "PlusJakartaSans_600SemiBold",
-  },
-  size: {
-    caption: 12,
-    body: 16,
-    label: 13,
-    title: 28,
-    hero: 36,
-  },
-  lineHeight: {
-    caption: 16,
-    body: 25,
-    label: 18,
-    title: 34,
-    hero: 42,
-  },
+	family: {
+		regular: 'PlusJakartaSans_400Regular',
+		medium: 'PlusJakartaSans_500Medium',
+		semiBold: 'PlusJakartaSans_600SemiBold',
+		bold: 'PlusJakartaSans_700Bold',
+		regularItalic: 'PlusJakartaSans_400Regular_Italic',
+		mediumItalic: 'PlusJakartaSans_500Medium_Italic',
+	},
+
+	size: {
+		xs: 12,
+		sm: 14,
+		md: 16,
+		lg: 18,
+		xl: 24,
+	},
+	lineHeight: {
+		xs: 16,
+		md: 25,
+		sm: 18,
+		lg: 28,
+		xl: 32,
+	},
 };
