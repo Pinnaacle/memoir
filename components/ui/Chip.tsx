@@ -8,6 +8,7 @@ interface ChipProps {
   color: string;
   isSelected?: boolean;
   setIsSelected?: (selected: boolean) => void;
+  style: any;
 }
 
 export default function Chip({
@@ -15,11 +16,13 @@ export default function Chip({
   color,
   isSelected,
   setIsSelected,
+  style,
 }: ChipProps) {
   return (
     <Pressable
       onPress={() => setIsSelected && setIsSelected(!isSelected)}
       style={[
+        style,
         isSelected ? styles.chipSelected : styles.chip,
         { backgroundColor: isSelected ? color : 'rgb(255, 255, 255, 0.5)' },
       ]}
@@ -45,6 +48,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.xs,
     borderRadius: 16,
     alignSelf: 'flex-start',
+    borderColor: 'transparent',
     borderWidth: 1,
   },
   label: {
