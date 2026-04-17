@@ -5,7 +5,7 @@ import { text as textTheme } from '@/theme/type';
 import { X } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Button from './Button';
+import Button from './ui/Button';
 
 interface HeaderProps {
   title: string;
