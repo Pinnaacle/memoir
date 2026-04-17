@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui/Text';
-import { baseColors, sectionColors } from '@/theme/colors';
+import { baseColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
@@ -17,6 +17,7 @@ interface CardProps extends React.ComponentProps<typeof View> {
 	description?: string;
 	type?: string;
 	icon?: 'heart' | 'plain' | 'house';
+	color?: string;
 }
 
 function Card(props: CardProps) {
@@ -38,6 +39,7 @@ const DefaultCard = ({
 	description,
 	type,
 	coverImage,
+	color,
 }: CardProps) => {
 	return (
 		<View style={[styles.card]}>
@@ -59,9 +61,7 @@ const DefaultCard = ({
 						style={[styles.title]}>
 						{title}
 					</Text>
-					<Text style={[styles.date, { color: sectionColors.timeline }]}>
-						{date}
-					</Text>
+					<Text style={[styles.date, { color: color }]}>{date}</Text>
 				</View>
 			</View>
 			<View style={styles.content}>
@@ -78,6 +78,7 @@ const CompressedCard = ({
 	location,
 	type,
 	coverImage,
+	color,
 }: CardProps) => {
 	return (
 		<View style={[styles.cardCompressed, styles.card]}>
@@ -95,9 +96,7 @@ const CompressedCard = ({
 				<Text role='heading' variant='h2' aria-level='3' style={[styles.title]}>
 					{title}
 				</Text>
-				<Text style={[styles.date, { color: sectionColors.events }]}>
-					{date}
-				</Text>
+				<Text style={[styles.date, { color: color }]}>{date}</Text>
 				<Text style={[styles.type]}>{type}</Text>
 				<View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
 					<MapPin color={baseColors.textSoft} size={textTheme.size.xs} />
@@ -114,6 +113,7 @@ const DetailedCard = ({
 	description,
 	images,
 	icon,
+	color,
 }: CardProps) => {
 	function daysBetween(date1: string, date2: string) {
 		const d1 = new Date(date1);
@@ -169,7 +169,7 @@ const DetailedCard = ({
 						style={[styles.title]}>
 						{title}
 					</Text>
-					<Text style={[styles.date, { color: sectionColors.chapters }]}>
+					<Text style={[styles.date, { color: color }]}>
 						{daysAgo === null ? date : `${date} • ${daysAgo} days ago`}
 					</Text>
 				</View>
