@@ -2,6 +2,7 @@ import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 
 export default function TimelineScreen() {
@@ -19,8 +20,9 @@ export default function TimelineScreen() {
       />
       <Button
         color={sectionColors.events}
-        title="Create new memory"
+        title="Go to sign in (test)"
         variant="default"
+        onPress={() => router.push('/sign-in')}
       />
       <Card
         variant="default"
