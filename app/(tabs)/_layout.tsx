@@ -15,7 +15,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: sectionColors.moments,
         tabBarInactiveTintColor: baseColors.textSoft,
         tabBarLabelStyle: {
-          fontFamily: text.family.label,
+          fontFamily: text.family.medium,
           fontSize: 11,
           marginTop: -2,
           marginBottom: 8,
@@ -35,7 +35,7 @@ export default function TabLayout() {
           title: "Timeline",
           headerTitleStyle: {
             color: sectionColors.timeline,
-            fontSize: text.size.title,
+            fontSize: text.size.xl,
           },
           tabBarActiveTintColor: sectionColors.timeline,
           tabBarIcon: ({ color }) => <House color={color} size={24} />,
@@ -47,8 +47,8 @@ export default function TabLayout() {
           title: "Moments",
           headerTitleStyle: {
             color: sectionColors.moments,
-            fontSize: text.size.title,
-            fontFamily: text.family.heading,
+            fontSize: text.size.xl,
+            fontFamily: text.family.bold,
           },
           tabBarActiveTintColor: sectionColors.moments,
           tabBarIcon: ({ color }) => <Heart color={color} size={24} />,
@@ -60,8 +60,8 @@ export default function TabLayout() {
           title: "Events",
           headerTitleStyle: {
             color: sectionColors.events,
-            fontSize: text.size.title,
-            fontFamily: text.family.heading,
+            fontSize: text.size.xl,
+            fontFamily: text.family.bold,
           },
           tabBarActiveTintColor: sectionColors.events,
           tabBarIcon: ({ color }) => <CalendarDays color={color} size={24} />,
@@ -73,8 +73,8 @@ export default function TabLayout() {
           title: "Chapters",
           headerTitleStyle: {
             color: sectionColors.chapters,
-            fontSize: text.size.title,
-            fontFamily: text.family.heading,
+            fontSize: text.size.xl,
+            fontFamily: text.family.bold,
           },
           tabBarActiveTintColor: sectionColors.chapters,
           tabBarIcon: ({ color }) => <Star color={color} size={24} />,
@@ -86,8 +86,8 @@ export default function TabLayout() {
           title: "Memories",
           headerTitleStyle: {
             color: sectionColors.memories,
-            fontSize: text.size.title,
-            fontFamily: text.family.heading,
+            fontSize: text.size.xl,
+            fontFamily: text.family.bold,
           },
           tabBarActiveTintColor: sectionColors.memories,
           tabBarIcon: ({ color }) => <Image color={color} size={24} />,
