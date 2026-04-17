@@ -1,4 +1,5 @@
 import { Card } from '@/components/ui/Card';
+import Header from '@/components/ui/Header';
 import { baseColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { ScrollView, StyleSheet } from 'react-native';
@@ -10,6 +11,7 @@ export default function TimelineScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <Header title="Timeline" tagLine="Se alle dine minder her" />
       <Card
         variant="default"
         title="Indflyttergave fra Eline"
