@@ -32,8 +32,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: sectionColors.events,
-    fontSize: text.size.title,
-    lineHeight: text.lineHeight.title,
+    fontSize: text.size.xl,
+    lineHeight: text.lineHeight.xl,
     marginBottom: space.md,
   },
   text: {
@@ -48,8 +48,8 @@ const styles = StyleSheet.create({
   },
   link: {
     color: sectionColors.events,
-    fontFamily: text.family.bodyStrong,
-    fontSize: text.size.body,
+    fontFamily: text.family.semiBold,
+    fontSize: text.size.md,
     marginTop: space.md,
     textDecorationLine: "underline",
   },

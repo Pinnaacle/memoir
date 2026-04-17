@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   button: {
-    fontFamily: text.family.bodyStrong,
+    fontFamily: text.family.semiBold,
     fontSize: 20,
     color: sectionColors.moments,
     textDecorationLine: "underline",

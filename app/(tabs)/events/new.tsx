@@ -40,14 +40,14 @@ const styles = StyleSheet.create({
   },
   title: {
     color: baseColors.text,
-    fontFamily: text.family.heading,
-    fontSize: text.size.title,
-    lineHeight: text.lineHeight.title,
+    fontFamily: text.family.bold,
+    fontSize: text.size.xl,
+    lineHeight: text.lineHeight.xl,
   },
   description: {
     color: baseColors.textSoft,
-    fontFamily: text.family.body,
-    fontSize: text.size.body,
+    fontFamily: text.family.regular,
+    fontSize: text.size.md,
     lineHeight: 24,
   },
 });

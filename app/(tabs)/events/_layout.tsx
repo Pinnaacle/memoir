@@ -20,7 +20,7 @@ export default function EventsLayout() {
           title: "New Event",
           headerTitleStyle: {
             color: sectionColors.events,
-            fontFamily: text.family.heading,
+            fontFamily: text.family.bold,
             fontSize: 20,
           },
         }}
