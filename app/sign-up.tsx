@@ -1,6 +1,6 @@
 import Button from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
-import { signIn } from '@/lib/auth';
+import { signUp } from '@/lib/auth';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
@@ -8,23 +8,28 @@ import { useForm } from '@tanstack/react-form';
 import * as Haptics from 'expo-haptics';
 import { Link, router } from 'expo-router';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    TextInput,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function SignInScreen() {
+export default function SignUpScreen() {
   const form = useForm({
     defaultValues: {
       email: '',
       password: '',
+      confirmPassword: '',
     },
     onSubmit: async ({ value }) => {
-      await signIn(value.email.trim(), value.password);
+      if (value.password !== value.confirmPassword) {
+        throw new Error('Passwords do not match.');
+      }
+
+      await signUp(value.email.trim(), value.password);
       router.replace('/(tabs)');
     },
   });
@@ -48,9 +53,9 @@ export default function SignInScreen() {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>Welcome back</Text>
+            <Text style={styles.title}>Create your account</Text>
             <Text style={styles.subtitle}>
-              Sign in to continue your memoir.
+              Start capturing your moments with Memoir.
             </Text>
           </View>
 
@@ -95,14 +100,45 @@ export default function SignInScreen() {
               name="password"
               validators={{
                 onSubmit: ({ value }) =>
-                  value ? undefined : 'Password is required.',
+                  value.length >= 8
+                    ? undefined
+                    : 'Password must be at least 8 characters.',
               }}
             >
               {(field) => (
                 <View style={styles.field}>
                   <Text style={styles.label}>Password</Text>
                   <TextInput
-                    placeholder="Enter your password"
+                    placeholder="Create a password"
+                    placeholderTextColor={baseColors.textMuted}
+                    secureTextEntry
+                    selectionColor={sectionColors.timeline}
+                    style={styles.input}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChangeText={field.handleChange}
+                  />
+                  {field.state.meta.errors[0] ? (
+                    <Text style={styles.errorText}>
+                      {field.state.meta.errors[0]}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+            </form.Field>
+
+            <form.Field
+              name="confirmPassword"
+              validators={{
+                onSubmit: ({ value }) =>
+                  value ? undefined : 'Please confirm your password.',
+              }}
+            >
+              {(field) => (
+                <View style={styles.field}>
+                  <Text style={styles.label}>Confirm password</Text>
+                  <TextInput
+                    placeholder="Confirm your password"
                     placeholderTextColor={baseColors.textMuted}
                     secureTextEntry
                     selectionColor={sectionColors.timeline}
@@ -125,7 +161,9 @@ export default function SignInScreen() {
             ) : null}
 
             <Button
-              title={form.state.isSubmitting ? 'Signing in...' : 'Sign In'}
+              title={
+                form.state.isSubmitting ? 'Creating account...' : 'Sign Up'
+              }
               color={sectionColors.timeline}
               onPress={handleSubmitPress}
               disabled={form.state.isSubmitting}
@@ -137,9 +175,9 @@ export default function SignInScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>No account yet? </Text>
-            <Link href="/sign-up" asChild>
-              <Text style={styles.footerLink}> Create one</Text>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <Link href="/sign-in" asChild>
+              <Text style={styles.footerLink}> Sign in</Text>
             </Link>
           </View>
         </View>
@@ -203,7 +241,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.md,
   },
   errorText: {
-    color: baseColors.textError,
+    color: '#ff7a7a',
     fontFamily: textTheme.family.medium,
     fontSize: textTheme.size.sm,
     lineHeight: textTheme.lineHeight.sm,
