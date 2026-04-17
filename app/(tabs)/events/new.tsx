@@ -1,24 +1,25 @@
 import { Text } from "@/components/ui/Text";
-import { baseColors, sectionColors } from "@/theme/colors";
+import { baseColors } from "@/theme/colors";
 import { space } from "@/theme/space";
 import { text } from "@/theme/type";
-import { Link } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 export default function NewEventScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>New Event</Text>
-      <Text style={styles.text}>Scaffold page for creating an event.</Text>
-      <View style={styles.links}>
-        <Link href="/events" style={styles.link}>
-          Back to events
-        </Link>
-        <Link href="/events/sample-event" style={styles.link}>
-          Open sample event
-        </Link>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}
+      style={styles.container}
+    >
+      <View style={styles.hero}>
+        <Text style={styles.title}>Create a new memory</Text>
+        <Text style={styles.description}>
+          This page is intentionally simplified so the route has a clean
+          starting point before the full event flow is rebuilt.
+        </Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -26,30 +27,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: baseColors.bg,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
+  },
+  content: {
+    paddingHorizontal: 18,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl,
+    gap: space.lg,
+  },
+  hero: {
+    gap: space.sm,
+    paddingBottom: space.sm,
   },
   title: {
-    color: sectionColors.events,
+    color: baseColors.text,
+    fontFamily: text.family.heading,
     fontSize: text.size.title,
     lineHeight: text.lineHeight.title,
-    marginBottom: space.md,
   },
-  text: {
+  description: {
     color: baseColors.textSoft,
-    fontSize: 16,
-    textAlign: "center",
-  },
-  links: {
-    marginTop: space.xl,
-    alignItems: "center",
-  },
-  link: {
-    color: sectionColors.events,
-    fontFamily: text.family.bodyStrong,
+    fontFamily: text.family.body,
     fontSize: text.size.body,
-    marginTop: space.md,
-    textDecorationLine: "underline",
+    lineHeight: 24,
   },
 });
