@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui/Text';
-import { baseColors, sectionColors } from '@/theme/colors';
+import { baseColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
@@ -8,15 +8,16 @@ import { Heart, House, MapPin, PlaneIcon } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 interface CardProps extends React.ComponentProps<typeof View> {
-  variant?: 'default' | 'compressed' | 'detailed';
-  title: string;
-  date: string;
-  coverImage?: string;
-  images?: string[];
-  location?: string;
-  description?: string;
-  type?: string;
-  icon?: 'heart' | 'plain' | 'house';
+	variant?: 'default' | 'compressed' | 'detailed';
+	title: string;
+	date: string;
+	coverImage?: string;
+	images?: string[];
+	location?: string;
+	description?: string;
+	type?: string;
+	icon?: 'heart' | 'plain' | 'house';
+	color?: string;
 }
 
 function Card(props: CardProps) {
@@ -33,11 +34,12 @@ function Card(props: CardProps) {
 }
 
 const DefaultCard = ({
-  title,
-  date,
-  description,
-  type,
-  coverImage,
+	title,
+	date,
+	description,
+	type,
+	coverImage,
+	color,
 }: CardProps) => {
   return (
     <View style={[styles.card]}>
@@ -51,70 +53,67 @@ const DefaultCard = ({
         />
         <View style={styles.overlay} />
 
-        <View style={[styles.headerDefault, styles.header]}>
-          <Text
-            role="heading"
-            variant="h2"
-            aria-level="3"
-            style={[styles.title]}
-          >
-            {title}
-          </Text>
-          <Text style={[styles.date, { color: sectionColors.timeline }]}>
-            {date}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.content}>
-        <Text style={[styles.type]}>{type}</Text>
-        <Text style={[styles.description]}>{description}</Text>
-      </View>
-    </View>
-  );
+				<View style={[styles.headerDefault, styles.header]}>
+					<Text
+						role='heading'
+						variant='h2'
+						aria-level='3'
+						style={[styles.title]}>
+						{title}
+					</Text>
+					<Text style={[styles.date, { color: color }]}>{date}</Text>
+				</View>
+			</View>
+			<View style={styles.content}>
+				<Text style={[styles.type]}>{type}</Text>
+				<Text style={[styles.description]}>{description}</Text>
+			</View>
+		</View>
+	);
 };
 
 const CompressedCard = ({
-  title,
-  date,
-  location,
-  type,
-  coverImage,
+	title,
+	date,
+	location,
+	type,
+	coverImage,
+	color,
 }: CardProps) => {
-  return (
-    <View style={[styles.cardCompressed, styles.card]}>
-      <View style={styles.imageContainerCompressed}>
-        <Image
-          source={{ uri: coverImage }}
-          style={{
-            width: '100%',
-            height: 140,
-          }}
-        />
-        <View style={styles.overlay} />
-      </View>
-      <View style={[styles.headerCompressed, styles.header]}>
-        <Text role="heading" variant="h2" aria-level="3" style={[styles.title]}>
-          {title}
-        </Text>
-        <Text style={[styles.date, { color: sectionColors.events }]}>
-          {date}
-        </Text>
-        <Text style={[styles.type]}>{type}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <MapPin color={baseColors.textSoft} size={textTheme.size.xs} />
-          <Text style={[styles.location]}>{location}</Text>
-        </View>
-      </View>
-    </View>
-  );
+	return (
+		<View style={[styles.cardCompressed, styles.card]}>
+			<View style={styles.imageContainerCompressed}>
+				<Image
+					source={{ uri: coverImage }}
+					style={{
+						width: '100%',
+						height: 140,
+					}}
+				/>
+				<View style={styles.overlay} />
+			</View>
+			<View style={[styles.headerCompressed, styles.header]}>
+				<Text role='heading' variant='h2' aria-level='3' style={[styles.title]}>
+					{title}
+				</Text>
+				<Text style={[styles.date, { color: color }]}>{date}</Text>
+				<Text style={[styles.type]}>{type}</Text>
+				<View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+					<MapPin color={baseColors.textSoft} size={textTheme.size.xs} />
+					<Text style={[styles.location]}>{location}</Text>
+				</View>
+			</View>
+		</View>
+	);
 };
 
 const DetailedCard = ({
-  title,
-  date,
-  description,
-  images,
-  icon,
+	title,
+	date,
+	description,
+	images,
+	icon,
+	color,
 }: CardProps) => {
   function daysBetween(date1: string, date2: string) {
     const d1 = new Date(date1);
@@ -163,20 +162,19 @@ const DetailedCard = ({
           />
         )}
 
-        <View style={styles.header}>
-          <Text
-            role="heading"
-            variant="h2"
-            aria-level="3"
-            style={[styles.title]}
-          >
-            {title}
-          </Text>
-          <Text style={[styles.date, { color: sectionColors.chapters }]}>
-            {daysAgo === null ? date : `${date} • ${daysAgo} days ago`}
-          </Text>
-        </View>
-      </View>
+				<View style={styles.header}>
+					<Text
+						role='heading'
+						variant='h2'
+						aria-level='3'
+						style={[styles.title]}>
+						{title}
+					</Text>
+					<Text style={[styles.date, { color: color }]}>
+						{daysAgo === null ? date : `${date} • ${daysAgo} days ago`}
+					</Text>
+				</View>
+			</View>
 
       <Text style={[styles.description]}>{description}</Text>
       <View style={styles.imageContainerDetailed}>
