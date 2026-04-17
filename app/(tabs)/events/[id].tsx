@@ -1,9 +1,9 @@
-import { Text } from "@/components/ui/Text";
-import { baseColors, sectionColors } from "@/theme/colors";
-import { space } from "@/theme/space";
-import { text } from "@/theme/type";
-import { Link } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { Text } from '@/components/ui/Text';
+import { baseColors, sectionColors } from '@/theme/colors';
+import { space } from '@/theme/space';
+import { text } from '@/theme/type';
+import { Link } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
 export default function EventDetailScreen() {
   return (
@@ -26,8 +26,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: baseColors.bg,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 24,
   },
   title: {
@@ -39,18 +39,18 @@ const styles = StyleSheet.create({
   text: {
     color: baseColors.textSoft,
     fontSize: 16,
-    textAlign: "center",
+    textAlign: 'center',
     marginTop: 4,
   },
   links: {
     marginTop: space.xl,
-    alignItems: "center",
+    alignItems: 'center',
   },
   link: {
     color: sectionColors.events,
     fontFamily: text.family.semiBold,
     fontSize: text.size.md,
     marginTop: space.md,
-    textDecorationLine: "underline",
+    textDecorationLine: 'underline',
   },
 });

@@ -1,8 +1,8 @@
-import { Text } from "@/components/ui/Text";
-import { baseColors } from "@/theme/colors";
-import { space } from "@/theme/space";
-import { text } from "@/theme/type";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Text } from '@/components/ui/Text';
+import { baseColors } from '@/theme/colors';
+import { space } from '@/theme/space';
+import { text } from '@/theme/type';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 export default function NewEventScreen() {
   return (

@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 import DateTimePicker, {
   type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
-import { Text } from "@/components/ui/Text";
-import { baseColors, sectionColors } from "@/theme/colors";
-import { radius } from "@/theme/radius";
-import { space } from "@/theme/space";
-import { text as textTheme } from "@/theme/type";
-import { CalendarDays } from "lucide-react-native";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
+} from '@react-native-community/datetimepicker';
+import { Text } from '@/components/ui/Text';
+import { baseColors, sectionColors } from '@/theme/colors';
+import { radius } from '@/theme/radius';
+import { space } from '@/theme/space';
+import { text as textTheme } from '@/theme/type';
+import { CalendarDays } from 'lucide-react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 type DatePickerProps = {
   label?: string;
@@ -21,14 +21,14 @@ type DatePickerProps = {
 };
 
 function formatDate(date?: Date) {
-  return date ? date.toLocaleDateString() : "";
+  return date ? date.toLocaleDateString() : '';
 }
 
 export function DatePicker({
-  label = "Date",
+  label = 'Date',
   value,
   onChange,
-  placeholder = "Pick a day",
+  placeholder = 'Pick a day',
   minimumDate,
   maximumDate,
 }: DatePickerProps) {
@@ -47,11 +47,11 @@ export function DatePicker({
   }, [value]);
 
   function handleChange(event: DateTimePickerEvent, nextDate?: Date) {
-    if (Platform.OS === "android") {
+    if (Platform.OS === 'android') {
       setShowPicker(false);
     }
 
-    if (event.type === "dismissed" || !nextDate) {
+    if (event.type === 'dismissed' || !nextDate) {
       return;
     }
 
@@ -84,7 +84,7 @@ export function DatePicker({
       {showPicker ? (
         <View style={styles.pickerCard}>
           <DateTimePicker
-            display={Platform.OS === "ios" ? "inline" : "default"}
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
             maximumDate={maximumDate}
             minimumDate={minimumDate}
             mode="date"
@@ -108,13 +108,13 @@ const styles = StyleSheet.create({
     lineHeight: textTheme.lineHeight.sm,
   },
   trigger: {
-    alignItems: "center",
+    alignItems: 'center',
     backgroundColor: baseColors.card,
     borderColor: baseColors.border,
     borderRadius: radius.md,
     borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     minHeight: 52,
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   pickerCard: {
     backgroundColor: baseColors.card,
     borderRadius: radius.lg,
-    overflow: "hidden",
+    overflow: 'hidden',
     padding: space.sm,
   },
 });

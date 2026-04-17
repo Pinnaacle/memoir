@@ -1,7 +1,7 @@
-import { Tabs } from "expo-router";
-import { CalendarDays, Heart, House, Image, Star } from "lucide-react-native";
-import { baseColors, sectionColors } from "../../theme/colors";
-import { text } from "../../theme/type";
+import { Tabs } from 'expo-router';
+import { CalendarDays, Heart, House, Image, Star } from 'lucide-react-native';
+import { baseColors, sectionColors } from '../../theme/colors';
+import { text } from '../../theme/type';
 
 export default function TabLayout() {
   return (
@@ -10,7 +10,7 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: baseColors.bg },
         headerShadowVisible: false,
         headerTintColor: baseColors.text,
-        headerTitleAlign: "left",
+        headerTitleAlign: 'left',
         sceneStyle: { backgroundColor: baseColors.bg },
         tabBarActiveTintColor: sectionColors.moments,
         tabBarInactiveTintColor: baseColors.textSoft,
@@ -21,7 +21,7 @@ export default function TabLayout() {
           marginBottom: 8,
         },
         tabBarStyle: {
-          backgroundColor: "rgba(13,13,13,0.95)",
+          backgroundColor: 'rgba(13,13,13,0.95)',
           borderTopWidth: 0,
           height: 83,
           paddingTop: 6,
@@ -32,7 +32,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Timeline",
+          title: 'Timeline',
           headerTitleStyle: {
             color: sectionColors.timeline,
             fontSize: text.size.xl,
@@ -44,7 +44,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="moments"
         options={{
-          title: "Moments",
+          title: 'Moments',
           headerTitleStyle: {
             color: sectionColors.moments,
             fontSize: text.size.xl,
@@ -57,7 +57,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="events"
         options={{
-          title: "Events",
+          title: 'Events',
           headerTitleStyle: {
             color: sectionColors.events,
             fontSize: text.size.xl,
@@ -70,7 +70,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chapters"
         options={{
-          title: "Chapters",
+          title: 'Chapters',
           headerTitleStyle: {
             color: sectionColors.chapters,
             fontSize: text.size.xl,
@@ -83,7 +83,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="memories"
         options={{
-          title: "Memories",
+          title: 'Memories',
           headerTitleStyle: {
             color: sectionColors.memories,
             fontSize: text.size.xl,

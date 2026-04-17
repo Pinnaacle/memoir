@@ -1,6 +1,6 @@
-import { baseColors, sectionColors } from "@/theme/colors";
-import { text } from "@/theme/type";
-import { Stack } from "expo-router";
+import { baseColors, sectionColors } from '@/theme/colors';
+import { text } from '@/theme/type';
+import { Stack } from 'expo-router';
 
 export default function EventsLayout() {
   return (
@@ -16,8 +16,8 @@ export default function EventsLayout() {
       <Stack.Screen
         name="new"
         options={{
-          presentation: "modal",
-          title: "New Event",
+          presentation: 'modal',
+          title: 'New Event',
           headerTitleStyle: {
             color: sectionColors.events,
             fontFamily: text.family.bold,
@@ -28,8 +28,8 @@ export default function EventsLayout() {
       <Stack.Screen
         name="[id]"
         options={{
-          headerTitle: "",
-          headerBackButtonDisplayMode: "minimal",
+          headerTitle: '',
+          headerBackButtonDisplayMode: 'minimal',
         }}
       />
     </Stack>

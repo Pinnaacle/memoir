@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function MomentsScreen() {
   return (
@@ -12,20 +12,20 @@ export default function MomentsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#1a1a1a',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 24,
   },
   title: {
-    color: "#ff2d78",
+    color: '#ff2d78',
     fontSize: 28,
-    fontWeight: "700",
+    fontWeight: '700',
     marginBottom: 10,
   },
   text: {
-    color: "#b8b0a8",
+    color: '#b8b0a8',
     fontSize: 16,
-    textAlign: "center",
+    textAlign: 'center',
   },
 });

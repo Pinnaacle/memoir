@@ -1,14 +1,14 @@
-import { Text } from "@/components/ui/Text";
-import { baseColors, sectionColors } from "@/theme/colors";
-import { radius } from "@/theme/radius";
-import { space } from "@/theme/space";
-import { text as textTheme } from "@/theme/type";
-import { Image } from "expo-image";
-import { Heart, House, MapPin, PlaneIcon } from "lucide-react-native";
-import { StyleSheet, View } from "react-native";
+import { Text } from '@/components/ui/Text';
+import { baseColors, sectionColors } from '@/theme/colors';
+import { radius } from '@/theme/radius';
+import { space } from '@/theme/space';
+import { text as textTheme } from '@/theme/type';
+import { Image } from 'expo-image';
+import { Heart, House, MapPin, PlaneIcon } from 'lucide-react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface CardProps extends React.ComponentProps<typeof View> {
-  variant?: "default" | "compressed" | "detailed";
+  variant?: 'default' | 'compressed' | 'detailed';
   title: string;
   date: string;
   coverImage?: string;
@@ -16,16 +16,16 @@ interface CardProps extends React.ComponentProps<typeof View> {
   location?: string;
   description?: string;
   type?: string;
-  icon?: "heart" | "plain" | "house";
+  icon?: 'heart' | 'plain' | 'house';
 }
 
 function Card(props: CardProps) {
-  const variant = props.variant ?? "default";
+  const variant = props.variant ?? 'default';
 
   switch (variant) {
-    case "compressed":
+    case 'compressed':
       return <CompressedCard {...props} />;
-    case "detailed":
+    case 'detailed':
       return <DetailedCard {...props} />;
     default:
       return <DefaultCard {...props} />;
@@ -45,7 +45,7 @@ const DefaultCard = ({
         <Image
           source={{ uri: coverImage }}
           style={{
-            width: "100%",
+            width: '100%',
             height: 140,
           }}
         />
@@ -86,7 +86,7 @@ const CompressedCard = ({
         <Image
           source={{ uri: coverImage }}
           style={{
-            width: "100%",
+            width: '100%',
             height: 140,
           }}
         />
@@ -100,7 +100,7 @@ const CompressedCard = ({
           {date}
         </Text>
         <Text style={[styles.type]}>{type}</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <MapPin color={baseColors.textSoft} size={textTheme.size.xs} />
           <Text style={[styles.location]}>{location}</Text>
         </View>
@@ -128,34 +128,34 @@ const DetailedCard = ({
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  const daysAgo = daysBetween(new Date().toISOString().split("T")[0], date);
+  const daysAgo = daysBetween(new Date().toISOString().split('T')[0], date);
   return (
     <View style={[styles.cardDetailed, styles.card]}>
       <View
         style={[
           {
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
             gap: space.sm,
           },
         ]}
       >
-        {icon === "heart" && (
+        {icon === 'heart' && (
           <Heart
             color={baseColors.text}
             size={24}
             style={[{ paddingHorizontal: space.lg }]}
           />
         )}
-        {icon === "plain" && (
+        {icon === 'plain' && (
           <PlaneIcon
             color={baseColors.text}
             size={24}
             style={[{ paddingHorizontal: space.lg }]}
           />
         )}
-        {icon === "house" && (
+        {icon === 'house' && (
           <House
             color={baseColors.text}
             size={24}
@@ -185,9 +185,9 @@ const DetailedCard = ({
             key={index}
             source={{ uri: img }}
             style={{
-              width: "22.5%",
+              width: '22.5%',
               aspectRatio: 1 / 1,
-              objectFit: "cover",
+              objectFit: 'cover',
               borderRadius: radius.lg,
             }}
           />
@@ -216,26 +216,26 @@ const styles = StyleSheet.create({
   },
 
   imageContainerDetailed: {
-    width: "100%",
-    display: "flex",
-    justifyContent: "space-between",
-    flexDirection: "row",
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'space-between',
+    flexDirection: 'row',
   },
   imageContainerCompressed: {
     borderRadius: radius.xl,
-    overflow: "hidden",
-    position: "relative",
+    overflow: 'hidden',
+    position: 'relative',
   },
   imageContainerDefault: {
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    overflow: "hidden",
-    position: "relative",
+    overflow: 'hidden',
+    position: 'relative',
   },
 
   overlay: {
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-    position: "absolute",
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
@@ -247,12 +247,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
   },
   headerCompressed: {
-    position: "absolute",
+    position: 'absolute',
     bottom: space.xl,
     left: space.md,
   },
   headerDefault: {
-    position: "absolute",
+    position: 'absolute',
     bottom: space.xl,
     left: space.md,
   },
