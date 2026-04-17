@@ -1,6 +1,5 @@
 import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import Header from '@/components/ui/Header';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { ScrollView, StyleSheet } from 'react-native';
@@ -12,7 +11,6 @@ export default function TimelineScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Header title="Timeline" tagLine="Se alle dine minder her" />
       <Button
         color={sectionColors.moments}
         title="Create new memory"
