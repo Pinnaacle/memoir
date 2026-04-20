@@ -1,6 +1,8 @@
 import Button from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
 import { signIn } from '@/lib/auth';
+import { signInSchema } from '@/lib/validation/auth';
+import { getSchemaFieldErrorHelpers } from '@/lib/validation/formErrors';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
@@ -33,6 +35,10 @@ export default function SignInScreen() {
   });
 
   const submitError = form.state.errorMap.onSubmit;
+  const { getFieldError } = getSchemaFieldErrorHelpers(
+    signInSchema,
+    form.state.values,
+  );
 
   const handleSubmitPress = async () => {
     if (isCoolingDown) {
@@ -40,7 +46,11 @@ export default function SignInScreen() {
     }
 
     setIsCoolingDown(true);
-    await form.handleSubmit();
+    try {
+      await form.handleSubmit();
+    } catch {
+      // TanStack Form keeps submit errors in state; suppress uncaught promise noise.
+    }
     setTimeout(() => setIsCoolingDown(false), 2500);
 
     if (Platform.OS === 'web') return;
@@ -66,15 +76,6 @@ export default function SignInScreen() {
           <View style={styles.form}>
             <form.Field
               name="email"
-              validators={{
-                onSubmit: ({ value }) => {
-                  if (!value.trim()) return 'Email is required.';
-                  const emailPattern = /^\S+@\S+\.\S+$/;
-                  return emailPattern.test(value.trim())
-                    ? undefined
-                    : 'Please enter a valid email.';
-                },
-              }}
             >
               {(field) => (
                 <View style={styles.field}>
@@ -91,22 +92,14 @@ export default function SignInScreen() {
                     onBlur={field.handleBlur}
                     onChangeText={field.handleChange}
                   />
-                  {field.state.meta.errors[0] ? (
-                    <Text style={styles.errorText}>
-                      {field.state.meta.errors[0]}
-                    </Text>
+                  {getFieldError('email') ? (
+                    <Text style={styles.errorText}>{getFieldError('email')}</Text>
                   ) : null}
                 </View>
               )}
             </form.Field>
 
-            <form.Field
-              name="password"
-              validators={{
-                onSubmit: ({ value }) =>
-                  value ? undefined : 'Password is required.',
-              }}
-            >
+            <form.Field name="password">
               {(field) => (
                 <View style={styles.field}>
                   <Text style={styles.label}>Password</Text>
@@ -120,10 +113,8 @@ export default function SignInScreen() {
                     onBlur={field.handleBlur}
                     onChangeText={field.handleChange}
                   />
-                  {field.state.meta.errors[0] ? (
-                    <Text style={styles.errorText}>
-                      {field.state.meta.errors[0]}
-                    </Text>
+                  {getFieldError('password') ? (
+                    <Text style={styles.errorText}>{getFieldError('password')}</Text>
                   ) : null}
                 </View>
               )}

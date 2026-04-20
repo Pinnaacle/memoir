@@ -1,6 +1,32 @@
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function mapAuthErrorMessage(rawMessage: string): string {
+  const message = rawMessage.toLowerCase();
+
+  if (message.includes('invalid login credentials')) {
+    return 'Invalid email or password.';
+  }
+
+  if (message.includes('email address') && message.includes('invalid')) {
+    return 'Please enter a valid email address.';
+  }
+
+  if (message.includes('rate limit')) {
+    return 'Too many attempts. Please wait a moment and try again.';
+  }
+
+  if (message.includes('user already registered')) {
+    return 'An account with this email already exists.';
+  }
+
+  return rawMessage;
+}
+
 async function upsertUserProfile(user: User, name: string): Promise<void> {
   const { error } = await supabase.from('profiles').upsert(
     {
@@ -21,10 +47,10 @@ export async function signIn(
   password: string,
 ): Promise<Session | null> {
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
+    email: normalizeEmail(email),
     password,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(mapAuthErrorMessage(error.message));
   return data.session;
 }
 
@@ -34,10 +60,10 @@ export async function signUp(
   password: string,
 ): Promise<Session | null> {
   const { data, error } = await supabase.auth.signUp({
-    email,
+    email: normalizeEmail(email),
     password,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(mapAuthErrorMessage(error.message));
 
   if (data.user) {
     await upsertUserProfile(data.user, name.trim());
