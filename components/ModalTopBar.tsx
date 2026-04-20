@@ -14,12 +14,7 @@ interface HeaderProps {
   onSave?: () => void;
 }
 
-export default function Header({
-  title,
-  color,
-  onClose,
-  onSave,
-}: HeaderProps) {
+export default function Header({ title, color, onClose, onSave }: HeaderProps) {
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={[styles.topBarContainer]}>
