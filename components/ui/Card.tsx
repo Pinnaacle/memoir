@@ -3,6 +3,7 @@ import { baseColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
+import { differenceInDays, parse } from 'date-fns';
 import { Image } from 'expo-image';
 import { Heart, House, MapPin, PlaneIcon } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
@@ -116,19 +117,9 @@ const DetailedCard = ({
   icon,
   color,
 }: CardProps) => {
-  function daysBetween(date1: string, date2: string) {
-    const d1 = new Date(date1);
-    const d2 = new Date(date2);
+  const d2 = parse(date, 'MMMM d, yyyy', new Date());
+  const days = differenceInDays(new Date(), d2);
 
-    if (Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime())) {
-      return null;
-    }
-
-    const diffTime = Math.abs(d2.getTime() - d1.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  const daysAgo = daysBetween(new Date().toISOString().split('T')[0], date);
   return (
     <View style={[styles.cardDetailed, styles.card]}>
       <View
@@ -173,7 +164,7 @@ const DetailedCard = ({
             {title}
           </Text>
           <Text style={[styles.date, { color: color }]}>
-            {daysAgo === null ? date : `${date} • ${daysAgo} days ago`}
+            {days === null ? date : `${date} • ${days} days ago`}
           </Text>
         </View>
       </View>
