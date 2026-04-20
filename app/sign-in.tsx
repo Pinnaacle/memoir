@@ -6,7 +6,8 @@ import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { useForm } from '@tanstack/react-form';
 import * as Haptics from 'expo-haptics';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
+import { useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -18,6 +19,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SignInScreen() {
+  //For preventing spamming the button hitting rate limiting on invalid emails
+  const [isCoolingDown, setIsCoolingDown] = useState(false);
+
   const form = useForm({
     defaultValues: {
       email: '',
@@ -25,14 +29,19 @@ export default function SignInScreen() {
     },
     onSubmit: async ({ value }) => {
       await signIn(value.email.trim(), value.password);
-      router.replace('/(tabs)');
     },
   });
 
   const submitError = form.state.errorMap.onSubmit;
 
   const handleSubmitPress = async () => {
+    if (isCoolingDown) {
+      return;
+    }
+
+    setIsCoolingDown(true);
     await form.handleSubmit();
+    setTimeout(() => setIsCoolingDown(false), 2500);
 
     if (Platform.OS === 'web') return;
     if (submitError || !form.state.isValid) {
@@ -128,7 +137,7 @@ export default function SignInScreen() {
               title={form.state.isSubmitting ? 'Signing in...' : 'Sign In'}
               color={sectionColors.timeline}
               onPress={handleSubmitPress}
-              disabled={form.state.isSubmitting}
+              disabled={form.state.isSubmitting || isCoolingDown}
             />
 
             {form.state.isSubmitting ? (

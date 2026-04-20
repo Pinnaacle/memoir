@@ -1,5 +1,20 @@
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+
+async function upsertUserProfile(user: User, name: string): Promise<void> {
+  const { error } = await supabase.from('profiles').upsert(
+    {
+      id: user.id,
+      email: user.email,
+      display_name: name,
+    },
+    { onConflict: 'id' },
+  );
+
+  if (error) {
+    throw new Error(`Could not create profile: ${error.message}`);
+  }
+}
 
 export async function signIn(
   email: string,
@@ -14,6 +29,7 @@ export async function signIn(
 }
 
 export async function signUp(
+  name: string,
   email: string,
   password: string,
 ): Promise<Session | null> {
@@ -22,6 +38,11 @@ export async function signUp(
     password,
   });
   if (error) throw new Error(error.message);
+
+  if (data.user) {
+    await upsertUserProfile(data.user, name.trim());
+  }
+
   return data.session;
 }
 

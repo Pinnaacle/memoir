@@ -6,38 +6,51 @@ import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { useForm } from '@tanstack/react-form';
 import * as Haptics from 'expo-haptics';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
+import { useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  TextInput,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    TextInput,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SignUpScreen() {
+  //For preventing spamming the button hitting rate limiting on invalid emails
+  const [isCoolingDown, setIsCoolingDown] = useState(false);
+
   const form = useForm({
     defaultValues: {
+      name: '',
       email: '',
       password: '',
       confirmPassword: '',
     },
     onSubmit: async ({ value }) => {
+      if (!value.name.trim()) {
+        throw new Error('Name is required.');
+      }
       if (value.password !== value.confirmPassword) {
         throw new Error('Passwords do not match.');
       }
 
-      await signUp(value.email.trim(), value.password);
-      router.replace('/(tabs)');
+      await signUp(value.name.trim(), value.email.trim(), value.password);
     },
   });
 
   const submitError = form.state.errorMap.onSubmit;
 
   const handleSubmitPress = async () => {
+    if (isCoolingDown) {
+      return;
+    }
+
+    setIsCoolingDown(true);
     await form.handleSubmit();
+    setTimeout(() => setIsCoolingDown(false), 2500);
 
     if (Platform.OS === 'web') return;
     if (submitError || !form.state.isValid) {
@@ -60,6 +73,36 @@ export default function SignUpScreen() {
           </View>
 
           <View style={styles.form}>
+            <form.Field
+              name="name"
+              validators={{
+                onSubmit: ({ value }) =>
+                  value.trim() ? undefined : 'Name is required.',
+              }}
+            >
+              {(field) => (
+                <View style={styles.field}>
+                  <Text style={styles.label}>Name</Text>
+                  <TextInput
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    placeholder="Johnny Deluxe"
+                    placeholderTextColor={baseColors.textMuted}
+                    selectionColor={sectionColors.timeline}
+                    style={styles.input}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChangeText={field.handleChange}
+                  />
+                  {field.state.meta.errors[0] ? (
+                    <Text style={styles.errorText}>
+                      {field.state.meta.errors[0]}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+            </form.Field>
+
             <form.Field
               name="email"
               validators={{
@@ -166,7 +209,7 @@ export default function SignUpScreen() {
               }
               color={sectionColors.timeline}
               onPress={handleSubmitPress}
-              disabled={form.state.isSubmitting}
+              disabled={form.state.isSubmitting || isCoolingDown}
             />
 
             {form.state.isSubmitting ? (
