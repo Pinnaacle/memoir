@@ -12,13 +12,25 @@ interface CardProps extends React.ComponentProps<typeof View> {
   variant?: 'default' | 'compressed' | 'detailed';
   title: string;
   date: string;
-  coverImage?: string;
+  coverImage?: string | number;
   images?: string[];
   location?: string;
   description?: string;
   type?: string;
   icon?: 'heart' | 'plain' | 'house';
   color?: string;
+}
+
+function resolveImageSource(image?: string | number) {
+  if (!image) {
+    return undefined;
+  }
+
+  if (typeof image === 'string') {
+    return { uri: image };
+  }
+
+  return image;
 }
 
 function Card(props: CardProps) {
@@ -42,11 +54,13 @@ const DefaultCard = ({
   coverImage,
   color,
 }: CardProps) => {
+  const imageSource = resolveImageSource(coverImage);
+
   return (
     <View style={[styles.card]}>
       <View style={styles.imageContainerDefault}>
         <Image
-          source={{ uri: coverImage }}
+          source={imageSource}
           style={{
             width: '100%',
             height: 140,
@@ -82,11 +96,13 @@ const CompressedCard = ({
   coverImage,
   color,
 }: CardProps) => {
+  const imageSource = resolveImageSource(coverImage);
+
   return (
     <View style={[styles.cardCompressed, styles.card]}>
       <View style={styles.imageContainerCompressed}>
         <Image
-          source={{ uri: coverImage }}
+          source={imageSource}
           style={{
             width: '100%',
             height: 140,
