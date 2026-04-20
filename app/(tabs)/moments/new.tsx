@@ -1,43 +1,43 @@
-import { Text } from "@/components/ui/Text";
-import { baseColors, sectionColors } from "@/theme/colors";
-import { space } from "@/theme/space";
-import { text as textTheme } from "@/theme/type";
-import { router } from "expo-router";
+import { Text } from '@/components/ui/Text';
+import { baseColors, sectionColors } from '@/theme/colors';
+import { space } from '@/theme/space';
+import { text as textTheme } from '@/theme/type';
+import { router } from 'expo-router';
 import {
-    CalendarDays,
-    Camera,
-    ChevronDown,
-    ImagePlus,
-    X,
-} from "lucide-react-native";
-import { useState } from "react";
+  CalendarDays,
+  Camera,
+  ChevronDown,
+  ImagePlus,
+  X,
+} from 'lucide-react-native';
+import { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const INPUT_RADIUS = 20;
-const FORM_ACCENT = "rgba(255,45,120,0.25)";
-const FIELD_BG = "rgba(255,255,255,0.05)";
-const PLACEHOLDER = "rgba(245,240,236,0.5)";
-const PHOTO_BORDER = "rgba(107,101,96,0.4)";
+const FORM_ACCENT = 'rgba(255,45,120,0.25)';
+const FIELD_BG = 'rgba(255,255,255,0.05)';
+const PLACEHOLDER = 'rgba(245,240,236,0.5)';
+const PHOTO_BORDER = 'rgba(107,101,96,0.4)';
 
 export default function NewMomentScreen() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const datePlaceholder = new Date(Date.now()).toLocaleDateString("en-GB");
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const datePlaceholder = new Date(Date.now()).toLocaleDateString('en-GB');
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.screen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.topBar}>
           <Pressable
@@ -145,41 +145,41 @@ const styles = StyleSheet.create({
     backgroundColor: baseColors.bg,
   },
   topBar: {
-    alignItems: "center",
+    alignItems: 'center',
     borderBottomColor: FORM_ACCENT,
     borderBottomWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     minHeight: 100,
     paddingHorizontal: space.lg,
     paddingBottom: space.sm,
   },
   iconButton: {
-    alignItems: "center",
+    alignItems: 'center',
     height: 44,
-    justifyContent: "center",
+    justifyContent: 'center',
     width: 44,
   },
   topBarTitle: {
     color: baseColors.text,
-    fontFamily: textTheme.family.body,
-    fontSize: 18,
-    lineHeight: 24,
+    fontFamily: textTheme.family.regular,
+    fontSize: textTheme.size.lg,
+    lineHeight: textTheme.lineHeight.lg,
   },
   saveButton: {
-    alignItems: "center",
+    alignItems: 'center',
     backgroundColor: sectionColors.moments,
     borderRadius: 999,
     height: 38,
-    justifyContent: "center",
+    justifyContent: 'center',
     minWidth: 74,
     paddingHorizontal: 20,
   },
   saveButtonText: {
     color: baseColors.bg,
-    fontFamily: textTheme.family.bodyStrong,
-    fontSize: 14,
-    lineHeight: 18,
+    fontFamily: textTheme.family.bold,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
   },
   content: {
     gap: space.xl,
@@ -188,65 +188,67 @@ const styles = StyleSheet.create({
     paddingBottom: space.xxl * 2,
   },
   dropdownField: {
-    alignItems: "center",
+    alignItems: 'center',
     backgroundColor: sectionColors.moments,
     borderRadius: 999,
-    flexDirection: "row",
+    flexDirection: 'row',
     height: 36,
-    justifyContent: "space-between",
+    justifyContent: 'space-between',
     paddingHorizontal: space.lg,
   },
   dropdownText: {
     color: baseColors.bg,
-    fontFamily: textTheme.family.bodyStrong,
-    fontSize: 14,
-    lineHeight: 18,
+    fontFamily: textTheme.family.bold,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
   },
   section: {
     gap: space.sm,
   },
   label: {
     color: baseColors.text,
-    fontFamily: textTheme.family.body,
-    fontSize: textTheme.size.body,
-    lineHeight: 22,
+    fontFamily: textTheme.family.regular,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
   },
   input: {
     backgroundColor: FIELD_BG,
-    borderColor: "transparent",
+    borderColor: 'transparent',
     borderRadius: INPUT_RADIUS,
     borderWidth: 1.5,
     color: baseColors.text,
-    fontFamily: textTheme.family.body,
-    fontSize: 14,
+    fontFamily: textTheme.family.regular,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
     height: 56,
     paddingHorizontal: space.lg,
   },
   dateField: {
-    alignItems: "center",
+    alignItems: 'center',
     backgroundColor: FIELD_BG,
     borderColor: FORM_ACCENT,
     borderRadius: INPUT_RADIUS,
     borderWidth: 1.5,
-    flexDirection: "row",
+    flexDirection: 'row',
     height: 56,
-    justifyContent: "space-between",
+    justifyContent: 'space-between',
     paddingHorizontal: 18,
   },
   dateText: {
     color: baseColors.text,
-    fontFamily: textTheme.family.body,
-    fontSize: 14,
-    lineHeight: 18,
+    fontFamily: textTheme.family.regular,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
   },
   textArea: {
     backgroundColor: FIELD_BG,
-    borderColor: "transparent",
+    borderColor: 'transparent',
     borderRadius: INPUT_RADIUS,
     borderWidth: 1.5,
     color: baseColors.text,
-    fontFamily: textTheme.family.body,
-    fontSize: 14,
+    fontFamily: textTheme.family.regular,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
     minHeight: 120,
     padding: space.lg,
   },
@@ -254,34 +256,34 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   photosHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   addPhotoText: {
     color: sectionColors.moments,
-    fontFamily: textTheme.family.body,
-    fontSize: textTheme.size.body,
-    lineHeight: 22,
+    fontFamily: textTheme.family.regular,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
   },
   photoDropzone: {
-    alignItems: "center",
+    alignItems: 'center',
     borderColor: PHOTO_BORDER,
     borderRadius: INPUT_RADIUS,
-    borderStyle: "dashed",
+    borderStyle: 'dashed',
     borderWidth: 2,
     gap: space.sm,
     height: 120,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   photoHintRow: {
-    alignItems: "center",
-    flexDirection: "row",
+    alignItems: 'center',
+    flexDirection: 'row',
     gap: 6,
   },
   photoHint: {
     color: baseColors.textMuted,
-    fontSize: textTheme.size.caption,
-    lineHeight: textTheme.lineHeight.caption,
+    fontSize: textTheme.size.xl,
+    lineHeight: textTheme.lineHeight.xl,
   },
 });

@@ -1,10 +1,10 @@
-import { Text } from "@/components/ui/Text";
-import { baseColors, sectionColors } from "@/theme/colors";
-import { space } from "@/theme/space";
-import { text as textTheme } from "@/theme/type";
-import { Link } from "expo-router";
-import { Plus } from "lucide-react-native";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Text } from '@/components/ui/Text';
+import { baseColors, sectionColors } from '@/theme/colors';
+import { space } from '@/theme/space';
+import { text as textTheme } from '@/theme/type';
+import { Link } from 'expo-router';
+import { Plus } from 'lucide-react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 export default function MomentsScreen() {
   return (
@@ -22,26 +22,26 @@ export default function MomentsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: "center",
+    alignItems: 'center',
     flex: 1,
     backgroundColor: baseColors.bg,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   centerText: {
     color: sectionColors.moments,
-    fontFamily: textTheme.family.heading,
-    fontSize: textTheme.size.title,
-    lineHeight: textTheme.lineHeight.title,
+    fontFamily: textTheme.family.bold,
+    fontSize: textTheme.size.xl,
+    lineHeight: textTheme.lineHeight.xl,
   },
   createButton: {
-    alignItems: "center",
+    alignItems: 'center',
     backgroundColor: sectionColors.moments,
     borderRadius: 999,
     bottom: space.xxl,
     height: 60,
     width: 60,
-    justifyContent: "center",
-    position: "absolute",
+    justifyContent: 'center',
+    position: 'absolute',
     right: space.xl,
     shadowColor: baseColors.shadow,
     shadowOffset: { width: 0, height: 8 },
