@@ -24,7 +24,7 @@ export default function Chip({
       style={[
         style,
         isSelected ? styles.chipSelected : styles.chip,
-        { backgroundColor: isSelected ? color : 'rgb(255, 255, 255, 0.5)' },
+        { backgroundColor: isSelected ? color : 'rgb(255, 255, 255, 0.05)' },
       ]}
     >
       <Text style={isSelected ? styles.selectedLabel : styles.label}>
