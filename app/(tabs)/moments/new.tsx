@@ -1,133 +1,104 @@
-import { Text } from '@/components/ui/Text';
+import { DatePicker } from '@/components/DatePicker';
+import ModalTopBar from '@/components/ModalTopBar';
+import {
+  AddImageField,
+  type SelectedImage,
+} from '@/components/ui/AddImageField';
+import { Dropdown } from '@/components/ui/Dropdown';
+import { Input } from '@/components/ui/Input';
 import { baseColors, sectionColors } from '@/theme/colors';
+import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { router } from 'expo-router';
-import {
-  CalendarDays,
-  Camera,
-  ChevronDown,
-  ImagePlus,
-  X,
-} from 'lucide-react-native';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const INPUT_RADIUS = 20;
-const FORM_ACCENT = 'rgba(255,45,120,0.25)';
-const FIELD_BG = 'rgba(255,255,255,0.05)';
-const PLACEHOLDER = 'rgba(245,240,236,0.5)';
-const PHOTO_BORDER = 'rgba(107,101,96,0.4)';
-
 export default function NewMomentScreen() {
+  const [momentType, setMomentType] = useState<string | undefined>();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const datePlaceholder = new Date(Date.now()).toLocaleDateString('en-GB');
+  const [date, setDate] = useState(new Date());
+  const [photos, setPhotos] = useState<SelectedImage[]>([]);
+
+  const momentTypeOptions = [
+    { label: 'Food', value: 'food' },
+    { label: 'Outfit', value: 'outfit' },
+    { label: 'Tiny Joy', value: 'tiny-joy' },
+    { label: 'Cozy Scene', value: 'cozy-scene' },
+    { label: 'Nature', value: 'nature' },
+    { label: 'Connection', value: 'connection' },
+    { label: 'Personal Win', value: 'personal-win' },
+  ];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close new moment"
-            hitSlop={12}
-            onPress={() => router.back()}
-            style={styles.iconButton}
-          >
-            <X color={baseColors.text} size={24} strokeWidth={2.25} />
-          </Pressable>
-
-          <Text style={styles.topBarTitle}>New Moment</Text>
-
-          <Pressable accessibilityRole="button" style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </Pressable>
-        </View>
+        <ModalTopBar
+          color={sectionColors.moments}
+          onClose={() => router.back()}
+          onSave={() => {}}
+          title="New Moment"
+        />
+        <View style={styles.headerDivider} />
 
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Pressable accessibilityRole="button" style={styles.dropdownField}>
-            <Text style={styles.dropdownText}>Moment type</Text>
-            <ChevronDown color={baseColors.bg} size={20} strokeWidth={2.5} />
-          </Pressable>
+          <View style={styles.form}>
+            <Dropdown
+              color={sectionColors.moments}
+              onChange={setMomentType}
+              options={momentTypeOptions}
+              placeholder="Moment type"
+              value={momentType}
+            />
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Title</Text>
-            <TextInput
-              placeholder="Give this moment a memorable title..."
-              placeholderTextColor={PLACEHOLDER}
-              selectionColor={sectionColors.moments}
-              style={styles.input}
-              value={title}
+            <Input
+              label="Title"
               onChangeText={setTitle}
+              placeholder="Give this moment a memorable title..."
+              value={title}
             />
-          </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Date *</Text>
-            <Pressable accessibilityRole="button" style={styles.dateField}>
-              <Text style={styles.dateText}>{datePlaceholder}</Text>
-              <CalendarDays
-                color={baseColors.textSoft}
-                size={18}
-                strokeWidth={2.1}
-              />
-            </Pressable>
-          </View>
+            <DatePicker
+              color={sectionColors.moments}
+              label="Date"
+              onChange={setDate}
+              required
+              value={date}
+            />
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Description *</Text>
-            <TextInput
-              multiline
-              placeholder="Describe this special moment..."
-              placeholderTextColor={PLACEHOLDER}
-              selectionColor={sectionColors.moments}
-              style={styles.textArea}
-              textAlignVertical="top"
-              value={description}
+            <Input
+              label="Description"
+              minRows={4}
               onChangeText={setDescription}
+              placeholder="Describe this special moment..."
+              required
+              value={description}
+              variant="textarea"
             />
-          </View>
 
-          <View style={styles.photosSection}>
-            <View style={styles.photosHeader}>
-              <Text style={styles.label}>Photos (0)</Text>
-              <Pressable accessibilityRole="button">
-                <Text style={styles.addPhotoText}>+ Add Photo</Text>
-              </Pressable>
-            </View>
-
-            <Pressable accessibilityRole="button" style={styles.photoDropzone}>
-              <Camera
-                color={baseColors.textMuted}
-                size={30}
-                strokeWidth={1.8}
-              />
-              <View style={styles.photoHintRow}>
-                <ImagePlus
-                  color={baseColors.textMuted}
-                  size={14}
-                  strokeWidth={2}
-                />
-                <Text style={styles.photoHint}>Tap to add photos</Text>
-              </View>
-            </Pressable>
+            <AddImageField
+              color={sectionColors.moments}
+              onChange={setPhotos}
+              value={photos}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -136,154 +107,39 @@ export default function NewMomentScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: baseColors.bg,
-  },
   screen: {
     flex: 1,
     backgroundColor: baseColors.bg,
   },
-  topBar: {
-    alignItems: 'center',
-    borderBottomColor: FORM_ACCENT,
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 100,
-    paddingHorizontal: space.lg,
-    paddingBottom: space.sm,
-  },
-  iconButton: {
-    alignItems: 'center',
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  topBarTitle: {
-    color: baseColors.text,
-    fontFamily: textTheme.family.regular,
-    fontSize: textTheme.size.lg,
-    lineHeight: textTheme.lineHeight.lg,
-  },
-  saveButton: {
-    alignItems: 'center',
-    backgroundColor: sectionColors.moments,
-    borderRadius: 999,
-    height: 38,
-    justifyContent: 'center',
-    minWidth: 74,
-    paddingHorizontal: 20,
-  },
-  saveButtonText: {
-    color: baseColors.bg,
-    fontFamily: textTheme.family.bold,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
+  headerDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255, 45, 120, 0.35)',
   },
   content: {
-    gap: space.xl,
     paddingHorizontal: space.lg,
-    paddingTop: space.xl,
-    paddingBottom: space.xxl * 2,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl,
+    gap: space.xl,
+  },
+  form: {
+    gap: space.xl,
   },
   dropdownField: {
-    alignItems: 'center',
+    gap: space.sm,
+  },
+  dropdownTrigger: {
+    minHeight: 36,
+    borderRadius: radius.full,
     backgroundColor: sectionColors.moments,
-    borderRadius: 999,
-    flexDirection: 'row',
-    height: 36,
-    justifyContent: 'space-between',
     paddingHorizontal: space.lg,
-  },
-  dropdownText: {
-    color: baseColors.bg,
-    fontFamily: textTheme.family.bold,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  section: {
-    gap: space.sm,
-  },
-  label: {
-    color: baseColors.text,
-    fontFamily: textTheme.family.regular,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  input: {
-    backgroundColor: FIELD_BG,
-    borderColor: 'transparent',
-    borderRadius: INPUT_RADIUS,
-    borderWidth: 1.5,
-    color: baseColors.text,
-    fontFamily: textTheme.family.regular,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-    height: 56,
-    paddingHorizontal: space.lg,
-  },
-  dateField: {
-    alignItems: 'center',
-    backgroundColor: FIELD_BG,
-    borderColor: FORM_ACCENT,
-    borderRadius: INPUT_RADIUS,
-    borderWidth: 1.5,
     flexDirection: 'row',
-    height: 56,
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-  },
-  dateText: {
-    color: baseColors.text,
-    fontFamily: textTheme.family.regular,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  textArea: {
-    backgroundColor: FIELD_BG,
-    borderColor: 'transparent',
-    borderRadius: INPUT_RADIUS,
-    borderWidth: 1.5,
-    color: baseColors.text,
-    fontFamily: textTheme.family.regular,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-    minHeight: 120,
-    padding: space.lg,
-  },
-  photosSection: {
-    gap: space.sm,
-  },
-  photosHeader: {
     alignItems: 'center',
-    flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  addPhotoText: {
-    color: sectionColors.moments,
-    fontFamily: textTheme.family.regular,
+  dropdownValue: {
+    color: '#1a1512',
+    fontFamily: textTheme.family.semiBold,
     fontSize: textTheme.size.sm,
     lineHeight: textTheme.lineHeight.sm,
-  },
-  photoDropzone: {
-    alignItems: 'center',
-    borderColor: PHOTO_BORDER,
-    borderRadius: INPUT_RADIUS,
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    gap: space.sm,
-    height: 120,
-    justifyContent: 'center',
-  },
-  photoHintRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  photoHint: {
-    color: baseColors.textMuted,
-    fontSize: textTheme.size.xl,
-    lineHeight: textTheme.lineHeight.xl,
   },
 });
