@@ -2,6 +2,7 @@ import Image from '@/components/ui/Image';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text } from '@/theme/type';
+import { Link } from 'expo-router';
 import {
   ScrollView,
   StyleSheet,
@@ -39,7 +40,7 @@ export default function MemoriesScreen() {
 
   const { width } = useWindowDimensions();
   const horizontalPadding = space.lg * 2; // same as your container paddingHorizontal
-  const availableWidth = width - horizontalPadding;
+  const availableWidth = width - horizontalPadding - 1; // subtracting 1 to account for rounding issues
   const gap = (availableWidth - ITEM_WIDTH * COLUMNS) / (COLUMNS - 1);
   return (
     <ScrollView
@@ -56,12 +57,13 @@ export default function MemoriesScreen() {
           ]}
         >
           {memories.map((memory) => (
-            <Image
-              key={memory.id}
-              source={memory.imageUrl}
-              variant="polaroid"
-              polaroid={{ color: '#2fe', date: memory.date }}
-            />
+            <Link key={memory.id} href={`/`}>
+              <Image
+                source={memory.imageUrl}
+                variant="polaroid"
+                polaroid={{ color: '#2fe', date: memory.date }}
+              />
+            </Link>
           ))}
         </View>
       </View>
