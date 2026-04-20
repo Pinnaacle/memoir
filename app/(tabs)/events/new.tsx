@@ -1,29 +1,36 @@
-import { useState } from 'react';
-
+import { DatePicker } from '@/components/DatePicker';
 import ModalTopBar from '@/components/ModalTopBar';
 import {
   AddImageField,
   type SelectedImage,
 } from '@/components/ui/AddImageField';
 import Chip from '@/components/ui/Chip';
-import { DatePicker } from '@/components/DatePicker';
+import Divider from '@/components/ui/Divider';
 import { Field, Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
+import { createEvent, eventKeys } from '@/lib/events';
+import {
+  createEventSchema,
+  type CreateEventValues,
+} from '@/lib/validation/event';
 import { baseColors, sectionColors } from '@/theme/colors';
-import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
+import { useForm } from '@tanstack/react-form';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { ChevronDown } from 'lucide-react-native';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const EVENT_TYPE_OPTIONS = [
-  'Date night',
-  'Anniversary',
-  'Adventure',
-  'Celebration',
-] as const;
-
+const SAVE_TIMEOUT_MS = 10000;
 const MOOD_OPTIONS = [
   'Magical',
   'Romantic',
@@ -33,203 +40,252 @@ const MOOD_OPTIONS = [
   'Dreamy',
 ] as const;
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error('Failed to save event. Please try again.'));
+    }, timeoutMs);
+
+    promise.then(
+      (value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
 export default function NewEventScreen() {
-  const [eventType, setEventType] = useState<string | null>(null);
-  const [isEventTypeOpen, setIsEventTypeOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [eventDate, setEventDate] = useState(new Date(2026, 3, 14));
-  const [location, setLocation] = useState('');
-  const [mood, setMood] = useState<string>('Romantic');
-  const [description, setDescription] = useState('');
+  const queryClient = useQueryClient();
   const [photos, setPhotos] = useState<SelectedImage[]>([]);
+  const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const createEventMutation = useMutation({
+    mutationFn: createEvent,
+  });
+
+  const form = useForm({
+    defaultValues: {
+      title: '',
+      occurredAt: new Date(),
+      location: '',
+      mood: 'Romantic',
+      notes: '',
+    } satisfies CreateEventValues,
+    onSubmit: async ({ value }) => {
+      const parsed = createEventSchema.safeParse(value);
+
+      if (!parsed.success) {
+        throw new Error(parsed.error.issues[0]?.message ?? 'Invalid input.');
+      }
+
+      try {
+        await createEventMutation.mutateAsync({
+          ...parsed.data,
+          photos,
+        });
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+
+        throw new Error('Failed to save event. Please try again.');
+      }
+
+      void queryClient.invalidateQueries({
+        queryKey: eventKeys.all,
+      });
+      router.back();
+    },
+  });
+
+  const validation = useMemo(
+    () => createEventSchema.safeParse(form.state.values),
+    [form.state.values],
+  );
+  const fieldErrors = validation.success
+    ? {}
+    : validation.error.flatten().fieldErrors;
+  const submitError = saveError ?? form.state.errorMap.onSubmit;
+
+  const handleSave = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    setHasTriedSubmit(true);
+    setSaveError(null);
+    const parsed = createEventSchema.safeParse(form.state.values);
+
+    if (!parsed.success) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      await withTimeout(form.handleSubmit(), SAVE_TIMEOUT_MS);
+    } catch (error) {
+      if (error instanceof Error) {
+        setSaveError(error.message);
+      } else {
+        setSaveError('Failed to save event. Please try again.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <ModalTopBar
-        color={sectionColors.events}
-        onClose={() => router.back()}
-        title="New Event"
-      />
-      <View style={styles.headerDivider} />
-
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <KeyboardAvoidingView
+        style={styles.screen}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.form}>
-          <View style={styles.dropdownField}>
-            <Pressable
-              accessibilityHint="Opens the event type options"
-              accessibilityLabel="Event type"
-              accessibilityRole="button"
-              accessibilityState={{ expanded: isEventTypeOpen }}
-              onPress={() => setIsEventTypeOpen((current) => !current)}
-              style={({ pressed }) => [
-                styles.dropdownTrigger,
-                pressed ? styles.pressed : null,
-              ]}
-            >
-              <Text style={styles.dropdownValue}>
-                {eventType ?? 'Event type'}
-              </Text>
-              <ChevronDown color="#1a1512" size={20} />
-            </Pressable>
+        <ModalTopBar
+          color={sectionColors.events}
+          onClose={() => router.back()}
+          onSave={handleSave}
+          title="New Event"
+        />
+        <Divider color={sectionColors.events} />
 
-            {isEventTypeOpen ? (
-              <View style={styles.dropdownMenu}>
-                {EVENT_TYPE_OPTIONS.map((option) => {
-                  const isSelected = option === eventType;
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.content}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.form}>
+            <form.Field name="title">
+              {(field) => (
+                <Input
+                  label="Title"
+                  onBlur={field.handleBlur}
+                  onChangeText={field.handleChange}
+                  placeholder="Give this event a memorable title..."
+                  required
+                  value={field.state.value}
+                />
+              )}
+            </form.Field>
+            {hasTriedSubmit && fieldErrors.title?.[0] ? (
+              <Text style={styles.errorText}>{fieldErrors.title[0]}</Text>
+            ) : null}
 
-                  return (
-                    <Pressable
-                      key={option}
-                      onPress={() => {
-                        setEventType(option);
-                        setIsEventTypeOpen(false);
-                      }}
-                      style={({ pressed }) => [
-                        styles.dropdownOption,
-                        isSelected ? styles.dropdownOptionSelected : null,
-                        pressed ? styles.pressed : null,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.dropdownOptionLabel,
-                          isSelected
-                            ? styles.dropdownOptionLabelSelected
-                            : null,
-                        ]}
-                      >
-                        {option}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+            <form.Field name="occurredAt">
+              {(field) => (
+                <DatePicker
+                  color={sectionColors.events}
+                  label="Date"
+                  onChange={field.handleChange}
+                  required
+                  value={field.state.value}
+                />
+              )}
+            </form.Field>
+            {hasTriedSubmit && fieldErrors.occurredAt?.[0] ? (
+              <Text style={styles.errorText}>{fieldErrors.occurredAt[0]}</Text>
+            ) : null}
+
+            <form.Field name="location">
+              {(field) => (
+                <Input
+                  label="Location"
+                  onBlur={field.handleBlur}
+                  onChangeText={field.handleChange}
+                  placeholder="Where did this take place?"
+                  required
+                  value={field.state.value}
+                />
+              )}
+            </form.Field>
+            {hasTriedSubmit && fieldErrors.location?.[0] ? (
+              <Text style={styles.errorText}>{fieldErrors.location[0]}</Text>
+            ) : null}
+
+            <form.Field name="mood">
+              {(field) => (
+                <Field label="Mood" required>
+                  <View style={styles.moodGrid}>
+                    {MOOD_OPTIONS.map((option) => (
+                      <Chip
+                        key={option}
+                        color={sectionColors.events}
+                        isSelected={field.state.value === option}
+                        label={option}
+                        setIsSelected={() => field.handleChange(option)}
+                        style={styles.moodChip}
+                      />
+                    ))}
+                  </View>
+                </Field>
+              )}
+            </form.Field>
+            {hasTriedSubmit && fieldErrors.mood?.[0] ? (
+              <Text style={styles.errorText}>{fieldErrors.mood[0]}</Text>
+            ) : null}
+
+            <form.Field name="notes">
+              {(field) => (
+                <Input
+                  label="Notes"
+                  minRows={4}
+                  onBlur={field.handleBlur}
+                  onChangeText={field.handleChange}
+                  placeholder="Add a few details you want to remember..."
+                  value={field.state.value}
+                  variant="textarea"
+                />
+              )}
+            </form.Field>
+            {hasTriedSubmit && fieldErrors.notes?.[0] ? (
+              <Text style={styles.errorText}>{fieldErrors.notes[0]}</Text>
+            ) : null}
+
+            <AddImageField
+              color={sectionColors.events}
+              onChange={setPhotos}
+              value={photos}
+            />
+
+            {submitError ? (
+              <Text style={styles.errorText}>{submitError}</Text>
+            ) : null}
+
+            {isSaving ? (
+              <View style={styles.submittingRow}>
+                <ActivityIndicator color={sectionColors.events} />
+                <Text style={styles.submittingText}>Saving event...</Text>
               </View>
             ) : null}
           </View>
-          <Input
-            label="Title"
-            onChangeText={setTitle}
-            placeholder="Give this date a memorable title..."
-            required
-            value={title}
-          />
-          <DatePicker
-            color={sectionColors.events}
-            label="Date"
-            onChange={setEventDate}
-            required
-            value={eventDate}
-          />
-          <Input
-            label="Location"
-            onChangeText={setLocation}
-            placeholder="Where did this take place?"
-            required
-            value={location}
-          />
-          <Field label="Mood">
-            <View style={styles.moodGrid}>
-              {MOOD_OPTIONS.map((option) => (
-                <Chip
-                  key={option}
-                  color={sectionColors.events}
-                  isSelected={mood === option}
-                  label={option}
-                  setIsSelected={() => setMood(option)}
-                  style={styles.moodChip}
-                />
-              ))}
-            </View>
-          </Field>
-          <Input
-            label="Description"
-            onChangeText={setDescription}
-            placeholder="Describe this special moment..."
-            required
-            variant="textarea"
-            minRows={4}
-            value={description}
-          />
-          <AddImageField
-            color={sectionColors.events}
-            value={photos}
-            onChange={setPhotos}
-          />
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: baseColors.bg,
   },
-  headerDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(168, 155, 255, 0.35)',
-  },
   content: {
-    paddingHorizontal: 18,
+    paddingHorizontal: space.lg,
     paddingTop: space.lg,
     paddingBottom: space.xxl,
     gap: space.xl,
   },
   form: {
     gap: space.xl,
-  },
-  pressed: {
-    opacity: 0.9,
-  },
-  dropdownField: {
-    gap: space.sm,
-  },
-  dropdownTrigger: {
-    minHeight: 36,
-    borderRadius: radius.full,
-    backgroundColor: sectionColors.events,
-    paddingHorizontal: space.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dropdownValue: {
-    color: '#1a1512',
-    fontFamily: textTheme.family.semiBold,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  dropdownMenu: {
-    backgroundColor: baseColors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(168, 155, 255, 0.25)',
-    overflow: 'hidden',
-  },
-  dropdownOption: {
-    paddingHorizontal: space.lg,
-    paddingVertical: space.md,
-  },
-  dropdownOptionSelected: {
-    backgroundColor: 'rgba(168, 155, 255, 0.12)',
-  },
-  dropdownOptionLabel: {
-    color: baseColors.text,
-    fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  dropdownOptionLabelSelected: {
-    color: sectionColors.events,
-    fontFamily: textTheme.family.semiBold,
   },
   moodGrid: {
     flexDirection: 'row',
@@ -242,5 +298,23 @@ const styles = StyleSheet.create({
     minHeight: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  errorText: {
+    color: baseColors.textError,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.xs,
+    lineHeight: textTheme.lineHeight.xs,
+    marginTop: -space.md,
+  },
+  submittingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: space.sm,
+  },
+  submittingText: {
+    color: baseColors.textSoft,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
   },
 });

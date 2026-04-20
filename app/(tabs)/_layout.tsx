@@ -82,10 +82,16 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="events"
-        options={{
-          title: 'Events',
-          tabBarActiveTintColor: sectionColors.events,
-          tabBarIcon: ({ color }) => <CalendarDays color={color} size={24} />,
+        options={({ route }) => {
+          const focusedRouteName =
+            getFocusedRouteNameFromRoute(route) ?? 'index';
+
+          return {
+            title: 'Events',
+            headerShown: focusedRouteName !== '[id]',
+            tabBarActiveTintColor: sectionColors.events,
+            tabBarIcon: ({ color }) => <CalendarDays color={color} size={24} />,
+          };
         }}
       />
       <Tabs.Screen

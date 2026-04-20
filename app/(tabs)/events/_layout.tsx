@@ -22,8 +22,7 @@ export default function EventsLayout() {
       <Stack.Screen
         name="[id]"
         options={{
-          headerTitle: '',
-          headerBackButtonDisplayMode: 'minimal',
+          headerShown: false,
         }}
       />
     </Stack>
