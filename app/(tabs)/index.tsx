@@ -1,7 +1,9 @@
 import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { signOut } from '@/lib/auth';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 
 export default function TimelineScreen() {
@@ -19,8 +21,21 @@ export default function TimelineScreen() {
       />
       <Button
         color={sectionColors.events}
-        title="Create new memory"
+        title="Go to sign in (test)"
         variant="default"
+        onPress={() => router.push('/sign-in')}
+      />
+      <Button
+        color={sectionColors.timeline}
+        title="Log out (test)"
+        variant="default"
+        onPress={async () => {
+          try {
+            await signOut();
+          } catch (error) {
+            console.error('Failed to sign out', error);
+          }
+        }}
       />
       <Card
         variant="default"
