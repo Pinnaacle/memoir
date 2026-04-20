@@ -18,6 +18,15 @@ export type MomentListItem = {
   coverImage?: string;
 };
 
+export type MomentDetail = {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  occurredOn: string;
+  photos: string[];
+};
+
 export async function listMomentsForCurrentUser(): Promise<MomentListItem[]> {
   const {
     data: { user },
@@ -150,4 +159,64 @@ export async function createMoment(input: CreateMomentInput): Promise<void> {
   if (linksError) {
     throw new Error(linksError.message);
   }
+}
+
+export async function getMomentById(
+  momentId: string,
+): Promise<MomentDetail | null> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw new Error(userError.message);
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const { data: moment, error: momentError } = await supabase
+    .from('moments')
+    .select('id, title, description, category, occurred_on')
+    .eq('id', momentId)
+    .eq('created_by', user.id)
+    .maybeSingle();
+
+  if (momentError) {
+    throw new Error(momentError.message);
+  }
+
+  if (!moment) {
+    return null;
+  }
+
+  const { data: links, error: linksError } = await supabase
+    .from('moment_photos')
+    .select('sort_order, photos(storage_path)')
+    .eq('moment_id', momentId)
+    .order('sort_order', { ascending: true });
+
+  if (linksError) {
+    throw new Error(linksError.message);
+  }
+
+  const photos = (links ?? [])
+    .map((link) => {
+      const relatedPhoto = Array.isArray(link.photos)
+        ? link.photos[0]
+        : link.photos;
+      return relatedPhoto?.storage_path ?? null;
+    })
+    .filter((path): path is string => Boolean(path));
+
+  return {
+    id: moment.id,
+    title: moment.title,
+    description: moment.description,
+    category: moment.category,
+    occurredOn: moment.occurred_on,
+    photos,
+  };
 }

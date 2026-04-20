@@ -14,6 +14,7 @@ export const text = {
     md: 16,
     lg: 18,
     xl: 24,
+    xxl: 26,
   },
   lineHeight: {
     xs: 16,

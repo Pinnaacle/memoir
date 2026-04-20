@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Stack } from 'expo-router';
 
 export default function MomentsLayout() {
   return (
@@ -11,11 +11,14 @@ export default function MomentsLayout() {
       <Stack.Screen
         name="new"
         options={{
-          animation: "slide_from_bottom",
-          presentation: "modal",
+          animation: 'slide_from_bottom',
+          presentation: 'modal',
         }}
       />
-      <Stack.Screen name="[id]" />
+      <Stack.Screen
+        name="[id]"
+        options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+      />
     </Stack>
   );
 }

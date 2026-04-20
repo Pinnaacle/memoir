@@ -5,7 +5,7 @@ import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text } from '@/theme/type';
 import { useFocusEffect } from '@react-navigation/native';
-import { Link } from 'expo-router';
+import { type Href, Link } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import {
@@ -99,16 +99,30 @@ export default function MomentsScreen() {
 
         {!isLoading && !loadError
           ? moments.map((moment) => (
-              <Card
+              <Link
+                asChild
+                href={`/moments/${moment.id}` as Href}
                 key={moment.id}
-                color={sectionColors.moments}
-                coverImage={moment.coverImage ?? FALLBACK_COVER_IMAGE}
-                date={formatOccurredOn(moment.occurredOn)}
-                description={moment.description ?? ''}
-                title={moment.title}
-                type={formatMomentType(moment.category)}
-                variant="default"
-              />
+              >
+                <Pressable
+                  accessibilityHint="Opens this moment"
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.cardPressable,
+                    pressed ? styles.cardPressed : null,
+                  ]}
+                >
+                  <Card
+                    color={sectionColors.moments}
+                    coverImage={moment.coverImage ?? FALLBACK_COVER_IMAGE}
+                    date={formatOccurredOn(moment.occurredOn)}
+                    description={moment.description ?? ''}
+                    title={moment.title}
+                    type={formatMomentType(moment.category)}
+                    variant="default"
+                  />
+                </Pressable>
+              </Link>
             ))
           : null}
       </ScrollView>
@@ -134,6 +148,12 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: space.xl,
+  },
+  cardPressable: {
+    borderRadius: 26,
+  },
+  cardPressed: {
+    opacity: 0.92,
   },
   emptyText: {
     color: baseColors.textSoft,

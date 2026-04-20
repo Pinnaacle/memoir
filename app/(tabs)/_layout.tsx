@@ -1,4 +1,5 @@
 import Header from '@/components/ui/Header';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Tabs } from 'expo-router';
 import { CalendarDays, Heart, House, Image, Star } from 'lucide-react-native';
 import { baseColors, sectionColors } from '../../theme/colors';
@@ -67,10 +68,16 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="moments"
-        options={{
-          title: 'Moments',
-          tabBarActiveTintColor: sectionColors.moments,
-          tabBarIcon: ({ color }) => <Heart color={color} size={24} />,
+        options={({ route }) => {
+          const focusedRouteName =
+            getFocusedRouteNameFromRoute(route) ?? 'index';
+
+          return {
+            title: 'Moments',
+            headerShown: focusedRouteName !== '[id]',
+            tabBarActiveTintColor: sectionColors.moments,
+            tabBarIcon: ({ color }) => <Heart color={color} size={24} />,
+          };
         }}
       />
       <Tabs.Screen
