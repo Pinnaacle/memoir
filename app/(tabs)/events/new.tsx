@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import ModalTopBar from '@/components/ModalTopBar';
 import {
   AddImageField,
   type SelectedImage,
@@ -8,6 +9,7 @@ import { DatePicker } from '@/components/DatePicker';
 import { Input } from '@/components/ui/Input';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 export default function NewEventScreen() {
@@ -17,52 +19,65 @@ export default function NewEventScreen() {
   const [photos, setPhotos] = useState<SelectedImage[]>([]);
 
   return (
-    <ScrollView
-      automaticallyAdjustKeyboardInsets
-      contentContainerStyle={styles.content}
-      contentInsetAdjustmentBehavior="automatic"
-      keyboardDismissMode="interactive"
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-      style={styles.container}
-    >
-      <View style={styles.form}>
-        <Input
-          label="Title"
-          onChangeText={setTitle}
-          placeholder="Enter milestone title..."
-          required
-          value={title}
-        />
-        <DatePicker
-          color={sectionColors.events}
-          label="Date"
-          onChange={setEventDate}
-          required
-          value={eventDate}
-        />
-        <Input
-          label="Description"
-          onChangeText={setDescription}
-          placeholder="Describe this special moment..."
-          required
-          variant="textarea"
-          minRows={4}
-          value={description}
-        />
-        <AddImageField
-          color={sectionColors.events}
-          value={photos}
-          onChange={setPhotos}
-        />
-      </View>
-    </ScrollView>
+    <View style={styles.container}>
+      <ModalTopBar
+        color={sectionColors.events}
+        onClose={() => router.back()}
+        title="New Event"
+      />
+      <View style={styles.headerDivider} />
+
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.form}>
+          <Input
+            label="Title"
+            onChangeText={setTitle}
+            placeholder="Enter milestone title..."
+            required
+            value={title}
+          />
+          <DatePicker
+            color={sectionColors.events}
+            label="Date"
+            onChange={setEventDate}
+            required
+            value={eventDate}
+          />
+          <Input
+            label="Description"
+            onChangeText={setDescription}
+            placeholder="Describe this special moment..."
+            required
+            variant="textarea"
+            minRows={4}
+            value={description}
+          />
+          <AddImageField
+            color={sectionColors.events}
+            value={photos}
+            onChange={setPhotos}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: baseColors.bg,
+  },
+  headerDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(168, 155, 255, 0.35)',
   },
   content: {
     paddingHorizontal: 18,
