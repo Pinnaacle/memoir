@@ -76,9 +76,7 @@ export default function SignUpScreen() {
           </View>
 
           <View style={styles.form}>
-            <form.Field
-              name="name"
-            >
+            <form.Field name="name">
               {(field) => (
                 <View style={styles.field}>
                   <Text style={styles.label}>Name</Text>
@@ -94,7 +92,9 @@ export default function SignUpScreen() {
                     onChangeText={field.handleChange}
                   />
                   {getFieldError('name') ? (
-                    <Text style={styles.errorText}>{getFieldError('name')}</Text>
+                    <Text style={styles.errorText}>
+                      {getFieldError('name')}
+                    </Text>
                   ) : null}
                 </View>
               )}
@@ -117,7 +117,9 @@ export default function SignUpScreen() {
                     onChangeText={field.handleChange}
                   />
                   {getFieldError('email') ? (
-                    <Text style={styles.errorText}>{getFieldError('email')}</Text>
+                    <Text style={styles.errorText}>
+                      {getFieldError('email')}
+                    </Text>
                   ) : null}
                 </View>
               )}
@@ -174,7 +176,7 @@ export default function SignUpScreen() {
             ) : null}
 
             <Button
-              title={
+              label={
                 form.state.isSubmitting ? 'Creating account...' : 'Sign Up'
               }
               color={sectionColors.timeline}
