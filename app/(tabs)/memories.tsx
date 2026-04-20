@@ -208,7 +208,9 @@ function Modal({
             variant="default"
             label={`See ${selectedMemory?.type as MemoryType}`}
             onPress={() => {
-              navigate(`/${selectedMemory?.type as MemoryType}s#${selectedMemory?.id}`);
+              navigate(
+                `/${selectedMemory?.type as MemoryType}s#${selectedMemory?.id}`,
+              );
               setModalVisible(false);
             }}
             // Handle see memory action, e.g., navigate to detail screen
