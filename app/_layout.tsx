@@ -1,3 +1,4 @@
+import { getSession, onAuthStateChange } from '@/lib/auth';
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_400Regular_Italic,
@@ -7,8 +8,10 @@ import {
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Redirect, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { baseColors } from '../theme/colors';
 
 export default function RootLayout() {
@@ -20,13 +23,55 @@ export default function RootLayout() {
     PlusJakartaSans_500Medium_Italic,
     PlusJakartaSans_400Regular_Italic,
   });
+  const [sessionReady, setSessionReady] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const segments = useSegments();
 
-  if (!loaded) {
+  useEffect(() => {
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const session = await getSession();
+        if (isMounted) {
+          setIsSignedIn(Boolean(session));
+        }
+      } finally {
+        if (isMounted) {
+          setSessionReady(true);
+        }
+      }
+    })();
+
+    const unsubscribe = onAuthStateChange((_, session) => {
+      setIsSignedIn(Boolean(session));
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  if (!loaded || !sessionReady) {
     return null;
   }
 
+  const currentRootSegment = segments[0];
+  const inAuthFlow =
+    currentRootSegment === 'sign-in' || currentRootSegment === 'sign-up';
+  const isNotFoundRoute = currentRootSegment === '+not-found';
+
+  if (!isSignedIn && !inAuthFlow && !isNotFoundRoute) {
+    return <Redirect href="/sign-in" />;
+  }
+
+  if (isSignedIn && inAuthFlow) {
+    return <Redirect href="/(tabs)" />;
+  }
+
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -34,9 +79,11 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: baseColors.bg },
         }}
       >
+        <Stack.Screen name="sign-in" />
+        <Stack.Screen name="sign-up" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" />
       </Stack>
-    </>
+    </SafeAreaProvider>
   );
 }

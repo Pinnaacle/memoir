@@ -1,8 +1,9 @@
 import { Text } from '@/components/ui/Text';
-import { baseColors, sectionColors } from '@/theme/colors';
+import { baseColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
+import { differenceInDays, parse } from 'date-fns';
 import { Image } from 'expo-image';
 import { Heart, House, MapPin, PlaneIcon } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
@@ -17,6 +18,7 @@ interface CardProps extends React.ComponentProps<typeof View> {
   description?: string;
   type?: string;
   icon?: 'heart' | 'plain' | 'house';
+  color?: string;
 }
 
 function Card(props: CardProps) {
@@ -38,6 +40,7 @@ const DefaultCard = ({
   description,
   type,
   coverImage,
+  color,
 }: CardProps) => {
   return (
     <View style={[styles.card]}>
@@ -60,9 +63,7 @@ const DefaultCard = ({
           >
             {title}
           </Text>
-          <Text style={[styles.date, { color: sectionColors.timeline }]}>
-            {date}
-          </Text>
+          <Text style={[styles.date, { color: color }]}>{date}</Text>
         </View>
       </View>
       <View style={styles.content}>
@@ -79,6 +80,7 @@ const CompressedCard = ({
   location,
   type,
   coverImage,
+  color,
 }: CardProps) => {
   return (
     <View style={[styles.cardCompressed, styles.card]}>
@@ -96,9 +98,7 @@ const CompressedCard = ({
         <Text role="heading" variant="h2" aria-level="3" style={[styles.title]}>
           {title}
         </Text>
-        <Text style={[styles.date, { color: sectionColors.events }]}>
-          {date}
-        </Text>
+        <Text style={[styles.date, { color: color }]}>{date}</Text>
         <Text style={[styles.type]}>{type}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <MapPin color={baseColors.textSoft} size={textTheme.size.xs} />
@@ -115,20 +115,11 @@ const DetailedCard = ({
   description,
   images,
   icon,
+  color,
 }: CardProps) => {
-  function daysBetween(date1: string, date2: string) {
-    const d1 = new Date(date1);
-    const d2 = new Date(date2);
+  const d2 = parse(date, 'MMMM d, yyyy', new Date());
+  const days = differenceInDays(new Date(), d2);
 
-    if (Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime())) {
-      return null;
-    }
-
-    const diffTime = Math.abs(d2.getTime() - d1.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  const daysAgo = daysBetween(new Date().toISOString().split('T')[0], date);
   return (
     <View style={[styles.cardDetailed, styles.card]}>
       <View
@@ -172,8 +163,8 @@ const DetailedCard = ({
           >
             {title}
           </Text>
-          <Text style={[styles.date, { color: sectionColors.chapters }]}>
-            {daysAgo === null ? date : `${date} • ${daysAgo} days ago`}
+          <Text style={[styles.date, { color: color }]}>
+            {days === null ? date : `${date} • ${days} days ago`}
           </Text>
         </View>
       </View>

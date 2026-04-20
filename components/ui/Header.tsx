@@ -4,6 +4,7 @@ import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { CircleUser } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface HeaderProps {
   title: string;
@@ -13,22 +14,28 @@ interface HeaderProps {
 
 export default function Header({ title, tagLine, color }: HeaderProps) {
   return (
-    <View style={[styles.headerContainer]}>
-      <View style={[styles.titleContainer]}>
-        <Text
-          role="heading"
-          style={[styles.title, { color: color ?? baseColors.text }]}
-        >
-          {title}
-        </Text>
-        <CircleUser color={baseColors.text} size={24} />
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
+      <View style={[styles.headerContainer]}>
+        <View style={[styles.titleContainer]}>
+          <Text
+            role="heading"
+            style={[styles.title, { color: color ?? baseColors.text }]}
+          >
+            {title}
+          </Text>
+          <CircleUser color={baseColors.text} size={24} />
+        </View>
+        {tagLine && <Text style={[styles.tagLine]}>{tagLine}</Text>}
       </View>
-      {tagLine && <Text style={[styles.tagLine]}>{tagLine}</Text>}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: baseColors.bg,
+    top: 16,
+  },
   headerContainer: {
     marginBottom: space.lg,
     marginHorizontal: space.lg,

@@ -1,17 +1,45 @@
+import Header from '@/components/ui/Header';
 import { Tabs } from 'expo-router';
 import { CalendarDays, Heart, House, Image, Star } from 'lucide-react-native';
 import { baseColors, sectionColors } from '../../theme/colors';
 import { text } from '../../theme/type';
 
+const headerColorByRoute: Record<string, string> = {
+  index: sectionColors.timeline,
+  moments: sectionColors.moments,
+  events: sectionColors.events,
+  chapters: sectionColors.chapters,
+  memories: sectionColors.memories,
+};
+
+const headerTitleByRoute: Record<string, string> = {
+  index: 'Timeline',
+  moments: 'Moments',
+  events: 'Events',
+  chapters: 'Chapters',
+  memories: 'Memories',
+};
+
+const headerTagLineByRoute: Record<string, string | undefined> = {
+  index: 'Your story, one memory at a time',
+  moments: 'Insert very meaningful text here',
+  events: 'Insert very meaningful text here',
+  chapters: 'Insert very meaningful text here',
+  memories: 'A lifetime of memories',
+};
+
 export default function TabLayout() {
   return (
     <Tabs
-      screenOptions={{
-        headerStyle: { backgroundColor: baseColors.bg },
-        headerShadowVisible: false,
-        headerTintColor: baseColors.text,
-        headerTitleAlign: 'left',
+      screenOptions={({ route }) => ({
         sceneStyle: { backgroundColor: baseColors.bg },
+        header: () => (
+          <Header
+            title={headerTitleByRoute[route.name] ?? route.name}
+            color={headerColorByRoute[route.name] ?? baseColors.text}
+            tagLine={headerTagLineByRoute[route.name]}
+          />
+        ),
         tabBarActiveTintColor: sectionColors.moments,
         tabBarInactiveTintColor: baseColors.textSoft,
         tabBarLabelStyle: {
@@ -27,16 +55,12 @@ export default function TabLayout() {
           paddingTop: 6,
           paddingBottom: 18,
         },
-      }}
+      })}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Timeline',
-          headerTitleStyle: {
-            color: sectionColors.timeline,
-            fontSize: text.size.xl,
-          },
           tabBarActiveTintColor: sectionColors.timeline,
           tabBarIcon: ({ color }) => <House color={color} size={24} />,
         }}
@@ -45,11 +69,6 @@ export default function TabLayout() {
         name="moments"
         options={{
           title: 'Moments',
-          headerTitleStyle: {
-            color: sectionColors.moments,
-            fontSize: text.size.xl,
-            fontFamily: text.family.bold,
-          },
           tabBarActiveTintColor: sectionColors.moments,
           tabBarIcon: ({ color }) => <Heart color={color} size={24} />,
         }}
@@ -58,11 +77,6 @@ export default function TabLayout() {
         name="events"
         options={{
           title: 'Events',
-          headerTitleStyle: {
-            color: sectionColors.events,
-            fontSize: text.size.xl,
-            fontFamily: text.family.bold,
-          },
           tabBarActiveTintColor: sectionColors.events,
           tabBarIcon: ({ color }) => <CalendarDays color={color} size={24} />,
         }}
@@ -71,11 +85,6 @@ export default function TabLayout() {
         name="chapters"
         options={{
           title: 'Chapters',
-          headerTitleStyle: {
-            color: sectionColors.chapters,
-            fontSize: text.size.xl,
-            fontFamily: text.family.bold,
-          },
           tabBarActiveTintColor: sectionColors.chapters,
           tabBarIcon: ({ color }) => <Star color={color} size={24} />,
         }}
@@ -84,11 +93,6 @@ export default function TabLayout() {
         name="memories"
         options={{
           title: 'Memories',
-          headerTitleStyle: {
-            color: sectionColors.memories,
-            fontSize: text.size.xl,
-            fontFamily: text.family.bold,
-          },
           tabBarActiveTintColor: sectionColors.memories,
           tabBarIcon: ({ color }) => <Image color={color} size={24} />,
         }}
