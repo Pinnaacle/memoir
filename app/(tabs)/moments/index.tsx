@@ -32,6 +32,18 @@ function formatOccurredOn(dateValue: string): string {
   });
 }
 
+function formatMomentType(value: string | null): string {
+  if (!value) {
+    return 'Moment';
+  }
+
+  return value
+    .split('-')
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+}
+
 export default function MomentsScreen() {
   const [moments, setMoments] = useState<MomentListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,7 +106,7 @@ export default function MomentsScreen() {
                 date={formatOccurredOn(moment.occurredOn)}
                 description={moment.description ?? ''}
                 title={moment.title}
-                type={moment.category ?? 'Moment'}
+                type={formatMomentType(moment.category)}
                 variant="default"
               />
             ))
