@@ -4,8 +4,15 @@ import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { usePathname } from 'expo-router';
 import { ChevronDown } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { Text } from './Text';
 
@@ -37,6 +44,7 @@ export function Dropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [internalValue, setInternalValue] = useState(defaultValue);
   const selectedValue = value ?? internalValue;
+  const chevronRotation = useRef(new Animated.Value(0)).current;
 
   const resolvedPlaceholder = useMemo(() => {
     if (placeholder) {
@@ -90,6 +98,30 @@ export function Dropdown({
     setIsOpen(false);
   }
 
+  //Smooth rotation of the chevron between open & closed state
+  useEffect(() => {
+    Animated.timing(chevronRotation, {
+      toValue: isOpen ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [chevronRotation, isOpen]);
+
+  const chevronAnimatedStyle = useMemo(
+    () => ({
+      transform: [
+        {
+          rotate: chevronRotation.interpolate({
+            inputRange: [0, 1],
+            outputRange: ['0deg', '180deg'],
+          }),
+        },
+      ],
+    }),
+    [chevronRotation],
+  );
+
   return (
     <View style={[styles.root, style]}>
       {isOpen ? (
@@ -121,11 +153,9 @@ export function Dropdown({
         ]}
       >
         <Text style={styles.triggerText}>{selectedLabel}</Text>
-        <View
-          style={[styles.chevronSlot, isOpen ? styles.chevronSlotOpen : null]}
-        >
+        <Animated.View style={[styles.chevronSlot, chevronAnimatedStyle]}>
           <ChevronDown color={baseColors.bg} size={20} strokeWidth={2.25} />
-        </View>
+        </Animated.View>
       </Pressable>
     </View>
   );
@@ -135,7 +165,6 @@ const styles = StyleSheet.create({
   root: {
     minHeight: 36,
     position: 'relative',
-    width: '100%',
   },
   trigger: {
     alignItems: 'center',
@@ -191,8 +220,5 @@ const styles = StyleSheet.create({
     height: 24,
     justifyContent: 'center',
     width: 24,
-  },
-  chevronSlotOpen: {
-    transform: [{ rotate: '180deg' }],
   },
 });
