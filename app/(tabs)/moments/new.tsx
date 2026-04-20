@@ -7,9 +7,7 @@ import {
 import { Dropdown } from '@/components/ui/Dropdown';
 import { Input } from '@/components/ui/Input';
 import { baseColors, sectionColors } from '@/theme/colors';
-import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
-import { text as textTheme } from '@/theme/type';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -126,20 +124,5 @@ const styles = StyleSheet.create({
   },
   dropdownField: {
     gap: space.sm,
-  },
-  dropdownTrigger: {
-    minHeight: 36,
-    borderRadius: radius.full,
-    backgroundColor: sectionColors.moments,
-    paddingHorizontal: space.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dropdownValue: {
-    color: '#1a1512',
-    fontFamily: textTheme.family.semiBold,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
   },
 });
