@@ -9,6 +9,49 @@ export type CreateMomentInput = {
   photos: SelectedImage[];
 };
 
+export type MomentListItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  occurredOn: string;
+  coverImage?: string;
+};
+
+export async function listMomentsForCurrentUser(): Promise<MomentListItem[]> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw new Error(userError.message);
+  }
+
+  if (!user) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('moments')
+    .select('id, title, description, category, occurred_on, created_at')
+    .eq('created_by', user.id)
+    .order('occurred_on', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((moment) => ({
+    id: moment.id,
+    title: moment.title,
+    description: moment.description,
+    category: moment.category,
+    occurredOn: moment.occurred_on,
+  }));
+}
+
 export async function createMoment(input: CreateMomentInput): Promise<void> {
   const {
     data: { user },

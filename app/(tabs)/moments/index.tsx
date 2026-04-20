@@ -1,42 +1,66 @@
 import { Card } from '@/components/ui/Card';
+import { Text } from '@/components/ui/Text';
+import { listMomentsForCurrentUser, type MomentListItem } from '@/lib/moments';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
+import { text } from '@/theme/type';
+import { useFocusEffect } from '@react-navigation/native';
 import { Link } from 'expo-router';
 import { Plus } from 'lucide-react-native';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const MOCK_MOMENTS = [
-  {
-    id: 'm-1',
-    title: 'Indflyttergave fra Eline',
-    date: 'March 14, 2026',
-    type: 'Tiny Joy',
-    description: 'Fine kopper fordi vi drikker te konstant',
-    coverImage:
-      'http://localhost:3845/assets/c55842b0bc85dfc62a3e04b57adac9d9e1d7a026.png',
-  },
-  {
-    id: 'm-2',
-    title: 'Madrassen pa gulvet og TV hygge',
-    date: 'March 9, 2026',
-    type: 'Cozy Scene',
-    description: 'Hyggelige stunder med dig, er min yndlings ting',
-    coverImage:
-      'http://localhost:3845/assets/5993c5c701eb17535f8821b93ed386e895fc9f2e.png',
-  },
-  {
-    id: 'm-3',
-    title: 'Valters barnedab',
-    date: 'February 1, 2026',
-    type: 'Connection',
-    description: 'Niko stod fadder - Big day',
-    coverImage:
-      'http://localhost:3845/assets/b4f30fcb1a5dc666b63246d02bea2c11ba24af34.png',
-  },
-] as const;
+const FALLBACK_COVER_IMAGE = require('@/assets/images/fallbackImage.png');
+
+function formatOccurredOn(dateValue: string): string {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
 export default function MomentsScreen() {
+  const [moments, setMoments] = useState<MomentListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const loadMoments = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    try {
+      const rows = await listMomentsForCurrentUser();
+      setMoments(rows);
+    } catch (error) {
+      if (error instanceof Error) {
+        setLoadError(error.message);
+      } else {
+        setLoadError('Failed to load moments.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadMoments();
+    }, [loadMoments]),
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -44,18 +68,37 @@ export default function MomentsScreen() {
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
-        {MOCK_MOMENTS.map((moment) => (
-          <Card
-            key={moment.id}
+        {isLoading ? (
+          <ActivityIndicator
             color={sectionColors.moments}
-            coverImage={moment.coverImage}
-            date={moment.date}
-            description={moment.description}
-            title={moment.title}
-            type={moment.type}
-            variant="default"
+            style={styles.loader}
           />
-        ))}
+        ) : null}
+
+        {!isLoading && loadError ? (
+          <Text style={styles.errorText}>{loadError}</Text>
+        ) : null}
+
+        {!isLoading && !loadError && moments.length === 0 ? (
+          <Text style={styles.emptyText}>
+            No moments yet. Tap + to create your first one.
+          </Text>
+        ) : null}
+
+        {!isLoading && !loadError
+          ? moments.map((moment) => (
+              <Card
+                key={moment.id}
+                color={sectionColors.moments}
+                coverImage={moment.coverImage ?? FALLBACK_COVER_IMAGE}
+                date={formatOccurredOn(moment.occurredOn)}
+                description={moment.description ?? ''}
+                title={moment.title}
+                type={moment.category ?? 'Moment'}
+                variant="default"
+              />
+            ))
+          : null}
       </ScrollView>
 
       <Link href="/moments/new" asChild>
@@ -76,6 +119,25 @@ const styles = StyleSheet.create({
     gap: space.md + space.xs,
     paddingHorizontal: space.lg,
     paddingBottom: 110,
+  },
+  loader: {
+    marginTop: space.xl,
+  },
+  emptyText: {
+    color: baseColors.textSoft,
+    fontFamily: text.family.regular,
+    fontSize: text.size.md,
+    lineHeight: text.lineHeight.md,
+    marginTop: space.xl,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: baseColors.textError,
+    fontFamily: text.family.medium,
+    fontSize: text.size.sm,
+    lineHeight: text.lineHeight.sm,
+    marginTop: space.xl,
+    textAlign: 'center',
   },
   createButton: {
     alignItems: 'center',
