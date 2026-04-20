@@ -2,6 +2,7 @@ import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
+import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -15,16 +16,17 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   LayoutChangeEvent,
-  Linking,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
   type ViewProps,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import { Text } from './Text';
 
@@ -33,7 +35,6 @@ export type ImageUploadStatus = 'local' | 'uploading' | 'uploaded' | 'failed';
 const DEFAULT_MAX_IMAGES = 6;
 const GRID_COLUMNS = 3;
 const GRID_GAP = space.md;
-const APP_NAME = 'Memoir';
 
 export type SelectedImage = {
   id: string;
@@ -90,26 +91,6 @@ function getNewImages(
   return pickedImages.filter((image) => !existingIds.has(image.id));
 }
 
-async function openAppSettings() {
-  try {
-    await Linking.openSettings();
-  } catch {
-    Alert.alert('Could not open settings', getPhotoAccessInstructions());
-  }
-}
-
-function getPhotoAccessInstructions() {
-  if (Platform.OS === 'ios') {
-    return `Open Settings > ${APP_NAME} > Photos, then choose Full Access or Limited Access.`;
-  }
-
-  if (Platform.OS === 'android') {
-    return `Open Settings > Apps > ${APP_NAME} > Permissions > Photos and videos, then tap Allow.`;
-  }
-
-  return 'Open your device settings and allow photo library access for this app.';
-}
-
 export function AddImageField({
   value,
   onChange,
@@ -126,6 +107,7 @@ export function AddImageField({
   const [isPicking, setIsPicking] = useState(false);
   const [gridWidth, setGridWidth] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
+  const insets = useSafeAreaInsets();
   const isEditable = editable ?? Boolean(onChange);
   const resolvedMaxImages =
     maxImages ??
@@ -168,45 +150,6 @@ export function AddImageField({
     );
   }
 
-  async function ensureMediaPermission() {
-    if (Platform.OS === 'web') {
-      return true;
-    }
-
-    const currentPermission =
-      await ImagePicker.getMediaLibraryPermissionsAsync();
-
-    if (currentPermission.granted) {
-      return true;
-    }
-
-    const nextPermission = currentPermission.canAskAgain
-      ? await ImagePicker.requestMediaLibraryPermissionsAsync()
-      : currentPermission;
-
-    if (nextPermission.granted) {
-      return true;
-    }
-
-    Alert.alert(
-      'Photo access needed',
-      `Allow photo library access to add images to this event.\n\n${getPhotoAccessInstructions()}`,
-      [
-        {
-          text: 'Not now',
-          style: 'cancel',
-        },
-        {
-          text: 'Open app settings',
-          onPress: () => {
-            void openAppSettings();
-          },
-        },
-      ],
-    );
-    return false;
-  }
-
   async function handleAddImages() {
     if (!isEditable || !onChange || isDisabled || !canAddMore) {
       return;
@@ -215,12 +158,6 @@ export function AddImageField({
     setIsPicking(true);
 
     try {
-      const hasPermission = await ensureMediaPermission();
-
-      if (!hasPermission) {
-        return;
-      }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         allowsMultipleSelection: allowsMultipleSelection && remainingSlots > 1,
         mediaTypes: ['images'],
@@ -246,7 +183,12 @@ export function AddImageField({
       onChange(nextImages);
       onRequestUpload?.(newImages);
     } catch {
-      Alert.alert('Could not open photos', 'Please try again in a moment.');
+      Alert.alert(
+        'Could not open photos',
+        Constants.appOwnership === 'expo'
+          ? 'Expo Go could not open the system photo picker. Close and reopen Expo Go, then try again.'
+          : 'Please try again in a moment.',
+      );
     } finally {
       setIsPicking(false);
     }
@@ -423,11 +365,14 @@ export function AddImageField({
       <Modal
         animationType="fade"
         onRequestClose={handleCloseViewer}
+        statusBarTranslucent
         transparent
         visible={activeImageIndex !== null}
       >
-        <SafeAreaView edges={['top', 'bottom']} style={styles.viewerSafeArea}>
-          <View style={styles.viewerHeader}>
+        <SafeAreaView edges={['bottom']} style={styles.viewerSafeArea}>
+          <View
+            style={[styles.viewerHeader, { paddingTop: insets.top + space.md }]}
+          >
             <Pressable
               accessibilityHint="Closes the photo viewer"
               accessibilityLabel="Close photo viewer"
@@ -644,7 +589,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: space.lg,
-    paddingTop: space.sm,
   },
   viewerHeaderButton: {
     alignItems: 'center',
