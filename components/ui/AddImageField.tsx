@@ -33,6 +33,7 @@ export type ImageUploadStatus = 'local' | 'uploading' | 'uploaded' | 'failed';
 const DEFAULT_MAX_IMAGES = 6;
 const GRID_COLUMNS = 3;
 const GRID_GAP = space.md;
+const APP_NAME = 'Memoir';
 
 export type SelectedImage = {
   id: string;
@@ -93,11 +94,20 @@ async function openAppSettings() {
   try {
     await Linking.openSettings();
   } catch {
-    Alert.alert(
-      'Could not open settings',
-      'Open your device settings to allow photo library access for this app.',
-    );
+    Alert.alert('Could not open settings', getPhotoAccessInstructions());
   }
+}
+
+function getPhotoAccessInstructions() {
+  if (Platform.OS === 'ios') {
+    return `Open Settings > ${APP_NAME} > Photos, then choose Full Access or Limited Access.`;
+  }
+
+  if (Platform.OS === 'android') {
+    return `Open Settings > Apps > ${APP_NAME} > Permissions > Photos and videos, then tap Allow.`;
+  }
+
+  return 'Open your device settings and allow photo library access for this app.';
 }
 
 export function AddImageField({
@@ -180,14 +190,14 @@ export function AddImageField({
 
     Alert.alert(
       'Photo access needed',
-      'Allow photo library access to add images to this event.',
+      `Allow photo library access to add images to this event.\n\n${getPhotoAccessInstructions()}`,
       [
         {
           text: 'Not now',
           style: 'cancel',
         },
         {
-          text: 'Open settings',
+          text: 'Open app settings',
           onPress: () => {
             void openAppSettings();
           },
