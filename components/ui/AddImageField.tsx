@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   LayoutChangeEvent,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -86,6 +87,17 @@ function getNewImages(
   const existingIds = new Set(currentImages.map((image) => image.id));
 
   return pickedImages.filter((image) => !existingIds.has(image.id));
+}
+
+async function openAppSettings() {
+  try {
+    await Linking.openSettings();
+  } catch {
+    Alert.alert(
+      'Could not open settings',
+      'Open your device settings to allow photo library access for this app.',
+    );
+  }
 }
 
 export function AddImageField({
@@ -169,6 +181,18 @@ export function AddImageField({
     Alert.alert(
       'Photo access needed',
       'Allow photo library access to add images to this event.',
+      [
+        {
+          text: 'Not now',
+          style: 'cancel',
+        },
+        {
+          text: 'Open settings',
+          onPress: () => {
+            void openAppSettings();
+          },
+        },
+      ],
     );
     return false;
   }
