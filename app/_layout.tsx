@@ -1,3 +1,4 @@
+import { getSession, onAuthStateChange } from '@/lib/auth';
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_400Regular_Italic,
@@ -6,11 +7,11 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
-import { getSession, onAuthStateChange } from '@/lib/auth';
 import { useFonts } from 'expo-font';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { baseColors } from '../theme/colors';
 
 export default function RootLayout() {
@@ -70,7 +71,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -83,6 +84,6 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" />
       </Stack>
-    </>
+    </SafeAreaProvider>
   );
 }
