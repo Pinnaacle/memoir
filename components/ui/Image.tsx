@@ -58,6 +58,7 @@ function LargeImage({ source, chip }: ImageProps) {
 
 function PolaroidImage({ source, polaroid }: ImageProps) {
   let randomRotation = Math.random() * 10 - 5; // Random rotation between -5 and 5 degrees
+  let pinOffset = 175 / 2 - 8; // Center the pin based on the image width and pin size
   return (
     <View
       style={[
@@ -68,7 +69,12 @@ function PolaroidImage({ source, polaroid }: ImageProps) {
       ]}
     >
       <ExpoImage source={{ uri: source }} style={styles.imagePolaroid} />
-      <View style={[styles.pin, { backgroundColor: polaroid?.color }]}></View>
+      <View
+        style={[
+          styles.pin,
+          { backgroundColor: polaroid?.color, left: pinOffset },
+        ]}
+      ></View>
       <Text style={styles.text}>{polaroid?.date}</Text>
     </View>
   );
@@ -123,13 +129,12 @@ const styles = StyleSheet.create({
     lineHeight: text.lineHeight.xs,
   },
   pin: {
-    width: 20,
-    height: 20,
+    width: 16,
+    height: 16,
     backgroundColor: 'white',
     borderRadius: 10,
     position: 'absolute',
-    top: -10,
-    left: '50%',
+    top: -8,
     marginHorizontal: 'auto',
     boxShadow: `0 2px 4px 0 ${baseColors.shadow}`,
   },
