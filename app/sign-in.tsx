@@ -11,12 +11,12 @@ import * as Haptics from 'expo-haptics';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    TextInput,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -74,9 +74,7 @@ export default function SignInScreen() {
           </View>
 
           <View style={styles.form}>
-            <form.Field
-              name="email"
-            >
+            <form.Field name="email">
               {(field) => (
                 <View style={styles.field}>
                   <Text style={styles.label}>Email</Text>
@@ -93,7 +91,9 @@ export default function SignInScreen() {
                     onChangeText={field.handleChange}
                   />
                   {getFieldError('email') ? (
-                    <Text style={styles.errorText}>{getFieldError('email')}</Text>
+                    <Text style={styles.errorText}>
+                      {getFieldError('email')}
+                    </Text>
                   ) : null}
                 </View>
               )}
@@ -114,7 +114,9 @@ export default function SignInScreen() {
                     onChangeText={field.handleChange}
                   />
                   {getFieldError('password') ? (
-                    <Text style={styles.errorText}>{getFieldError('password')}</Text>
+                    <Text style={styles.errorText}>
+                      {getFieldError('password')}
+                    </Text>
                   ) : null}
                 </View>
               )}
