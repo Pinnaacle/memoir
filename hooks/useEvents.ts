@@ -1,7 +1,9 @@
 import {
   createEvent,
+  deleteEvent,
   getEventById,
   listEventsForGroup,
+  updateEvent,
 } from '@/services/events';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -41,6 +43,32 @@ export function useCreateEventMutation() {
 
   return useMutation({
     mutationFn: createEvent,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: eventKeys.all,
+      });
+    },
+  });
+}
+
+export function useUpdateEventMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateEvent,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: eventKeys.all,
+      });
+    },
+  });
+}
+
+export function useDeleteEventMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteEvent,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: eventKeys.all,

@@ -16,6 +16,12 @@ export default function EventsLayout() {
           presentation: 'modal',
         }}
       />
+      <Stack.Screen
+        name="edit/[id]"
+        options={{
+          presentation: 'modal',
+        }}
+      />
       <Stack.Screen name="[id]" />
     </Stack>
   );

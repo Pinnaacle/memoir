@@ -1,16 +1,26 @@
 import Divider from '@/components/ui/Divider';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
-import { useEventDetailQuery } from '@/hooks/useEvents';
+import { useDeleteEventMutation, useEventDetailQuery } from '@/hooks/useEvents';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { CalendarDays, ChevronLeft, MapPin } from 'lucide-react-native';
+import {
+  CalendarDays,
+  ChevronLeft,
+  MapPin,
+  MoreHorizontal,
+  PencilLine,
+  Trash2,
+} from 'lucide-react-native';
+import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -37,6 +47,8 @@ function formatOccurredOn(dateValue: string): string {
 export default function EventDetailScreen() {
   const insets = useSafeAreaInsets();
   const { activeGroup, isLoading: isLoadingGroups } = useActiveGroup();
+  const deleteEventMutation = useDeleteEventMutation();
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
   const eventId = Array.isArray(rawId) ? rawId[0] : rawId;
@@ -45,7 +57,7 @@ export default function EventDetailScreen() {
     ? formatOccurredOn(eventQuery.data.occurredOn)
     : '';
   const heroImageSource = eventQuery.data?.photos[0]
-    ? { uri: eventQuery.data.photos[0] }
+    ? { uri: eventQuery.data.photos[0].storagePath }
     : FALLBACK_COVER_IMAGE;
   const photoThumbs = eventQuery.data?.photos.slice(0, 3) ?? [];
   const loadError =
@@ -54,7 +66,66 @@ export default function EventDetailScreen() {
       : eventQuery.error
         ? 'Could not load event.'
         : null;
+  const deleteError =
+    deleteEventMutation.error instanceof Error
+      ? deleteEventMutation.error.message
+      : deleteEventMutation.error
+        ? 'Could not delete event.'
+        : null;
   const hasNotes = Boolean(eventQuery.data?.notes?.trim());
+
+  async function handleConfirmDelete() {
+    if (!eventId || !activeGroup?.id) {
+      return;
+    }
+
+    try {
+      await deleteEventMutation.mutateAsync({
+        eventId,
+        groupId: activeGroup.id,
+      });
+      router.replace('/events');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not delete event.';
+
+      Alert.alert('Could not delete event', message);
+    }
+  }
+
+  function handleDeleteEvent() {
+    setIsActionMenuOpen(false);
+
+    Alert.alert(
+      'Delete event?',
+      'This removes the event from this space and unlinks its event photos.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void handleConfirmDelete();
+          },
+        },
+      ],
+    );
+  }
+
+  function handleEditEvent() {
+    if (!eventId) {
+      return;
+    }
+
+    setIsActionMenuOpen(false);
+    router.push({
+      pathname: '/events/edit/[id]',
+      params: { id: eventId },
+    });
+  }
 
   if (isLoadingGroups || eventQuery.isPending) {
     return (
@@ -105,6 +176,22 @@ export default function EventDetailScreen() {
             <ChevronLeft color={baseColors.text} size={22} />
           </Pressable>
 
+          <Pressable
+            accessibilityHint="Opens event actions"
+            accessibilityLabel="Open event actions"
+            accessibilityRole="button"
+            disabled={deleteEventMutation.isPending}
+            onPress={() => setIsActionMenuOpen(true)}
+            style={[
+              styles.actionButton,
+              {
+                top: insets.top + space.sm,
+              },
+            ]}
+          >
+            <MoreHorizontal color={baseColors.text} size={22} />
+          </Pressable>
+
           {eventQuery.data.mood ? (
             <View style={styles.moodPill}>
               <Text style={styles.moodPillText}>{eventQuery.data.mood}</Text>
@@ -114,6 +201,10 @@ export default function EventDetailScreen() {
 
         <View style={styles.bodyCard}>
           <Text style={styles.title}>{eventQuery.data.title}</Text>
+
+          {deleteError ? (
+            <Text style={styles.inlineErrorText}>{deleteError}</Text>
+          ) : null}
 
           <View style={styles.metaStack}>
             <View style={styles.metaRow}>
@@ -171,10 +262,10 @@ export default function EventDetailScreen() {
                 }
 
                 return (
-                  <View key={photo} style={styles.photoThumbWrap}>
+                  <View key={photo.id} style={styles.photoThumbWrap}>
                     <Image
                       contentFit="cover"
-                      source={{ uri: photo }}
+                      source={{ uri: photo.storagePath }}
                       style={styles.photoThumb}
                     />
                   </View>
@@ -184,6 +275,59 @@ export default function EventDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setIsActionMenuOpen(false)}
+        transparent
+        visible={isActionMenuOpen}
+      >
+        <View style={styles.menuModal}>
+          <Pressable
+            accessibilityLabel="Close event actions"
+            onPress={() => setIsActionMenuOpen(false)}
+            style={styles.menuBackdrop}
+          />
+
+          <View
+            style={[
+              styles.menuCard,
+              {
+                right: space.lg,
+                top: insets.top + space.sm + 48,
+              },
+            ]}
+          >
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleEditEvent}
+              style={({ pressed }) => [
+                styles.menuAction,
+                pressed ? styles.menuActionPressed : null,
+              ]}
+            >
+              <PencilLine color={baseColors.text} size={18} />
+              <Text style={styles.menuActionText}>Edit event</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={deleteEventMutation.isPending}
+              onPress={handleDeleteEvent}
+              style={({ pressed }) => [
+                styles.menuAction,
+                pressed ? styles.menuActionPressed : null,
+                deleteEventMutation.isPending ? styles.menuActionDisabled : null,
+              ]}
+            >
+              <Trash2 color={baseColors.textError} size={18} />
+              <Text style={styles.deleteActionText}>
+                {deleteEventMutation.isPending ? 'Deleting...' : 'Delete event'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -224,6 +368,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
   },
+  actionButton: {
+    position: 'absolute',
+    right: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
   moodPill: {
     position: 'absolute',
     left: space.lg,
@@ -254,6 +410,12 @@ const styles = StyleSheet.create({
     fontFamily: textTheme.family.semiBold,
     fontSize: textTheme.size.xxl,
     lineHeight: textTheme.lineHeight.xl,
+  },
+  inlineErrorText: {
+    color: baseColors.textError,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
   },
   metaStack: {
     gap: 6,
@@ -323,6 +485,49 @@ const styles = StyleSheet.create({
     fontFamily: textTheme.family.regular,
     fontSize: textTheme.size.sm,
     lineHeight: 33,
+  },
+  menuModal: {
+    flex: 1,
+  },
+  menuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  menuCard: {
+    position: 'absolute',
+    minWidth: 180,
+    backgroundColor: '#25211d',
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: space.xs,
+    gap: space.xxs,
+  },
+  menuAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    borderRadius: radius.lg,
+    paddingHorizontal: space.md,
+    paddingVertical: space.md,
+  },
+  menuActionPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  menuActionDisabled: {
+    opacity: 0.6,
+  },
+  menuActionText: {
+    color: baseColors.text,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
+  },
+  deleteActionText: {
+    color: baseColors.textError,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
   },
   errorText: {
     color: baseColors.textError,

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 
 export type EventPhotoInput = {
+  id?: string;
   storagePath?: string | null;
 };
 
@@ -14,6 +15,15 @@ export type CreateEventInput = {
   photos: EventPhotoInput[];
 };
 
+export type UpdateEventInput = CreateEventInput & {
+  eventId: string;
+};
+
+export type DeleteEventInput = {
+  eventId: string;
+  groupId: string;
+};
+
 export type EventListItem = {
   id: string;
   title: string;
@@ -23,6 +33,11 @@ export type EventListItem = {
   coverImage?: string;
 };
 
+export type EventDetailPhoto = {
+  id: string;
+  storagePath: string;
+};
+
 export type EventDetail = {
   id: string;
   title: string;
@@ -30,15 +45,17 @@ export type EventDetail = {
   locationText: string | null;
   mood: string | null;
   notes: string | null;
-  photos: string[];
+  photos: EventDetailPhoto[];
+};
+
+type RelatedPhotoRow = {
+  id?: string | null;
+  storage_path?: string | null;
 };
 
 type LinkedPhotoRow = {
   event_id?: string | null;
-  photos?:
-    | { storage_path?: string | null }
-    | { storage_path?: string | null }[]
-    | null;
+  photos?: RelatedPhotoRow | RelatedPhotoRow[] | null;
 };
 
 function normalizeOptionalText(value: string): string | null {
@@ -47,12 +64,51 @@ function normalizeOptionalText(value: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function resolveStoragePath(link: LinkedPhotoRow): string | null {
-  const relatedPhoto = Array.isArray(link.photos)
-    ? link.photos[0]
-    : link.photos;
+function formatDateOnly(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
 
-  return relatedPhoto?.storage_path ?? null;
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeEventRecord(input: {
+  title: string;
+  occurredAt: Date;
+  location: string;
+  mood: string;
+  notes: string;
+}) {
+  return {
+    title: input.title.trim(),
+    occurred_on: formatDateOnly(input.occurredAt),
+    location_text: normalizeOptionalText(input.location),
+    mood: normalizeOptionalText(input.mood),
+    notes: normalizeOptionalText(input.notes),
+  };
+}
+
+function resolveRelatedPhoto(link: LinkedPhotoRow): RelatedPhotoRow | null {
+  const relatedPhoto = Array.isArray(link.photos) ? link.photos[0] : link.photos;
+
+  return relatedPhoto ?? null;
+}
+
+function resolveStoragePath(link: LinkedPhotoRow): string | null {
+  return resolveRelatedPhoto(link)?.storage_path ?? null;
+}
+
+function resolveEventDetailPhoto(link: LinkedPhotoRow): EventDetailPhoto | null {
+  const relatedPhoto = resolveRelatedPhoto(link);
+
+  if (!relatedPhoto?.id || !relatedPhoto.storage_path) {
+    return null;
+  }
+
+  return {
+    id: relatedPhoto.id,
+    storagePath: relatedPhoto.storage_path,
+  };
 }
 
 async function getCurrentUserId(): Promise<string | null> {
@@ -130,6 +186,87 @@ export async function listEventsForGroup(
   }));
 }
 
+async function insertPhotos(
+  groupId: string,
+  userId: string,
+  occurredAt: Date,
+  photos: EventPhotoInput[],
+): Promise<string[]> {
+  const newPhotos = photos.filter((photo) => !photo.id && photo.storagePath);
+
+  if (newPhotos.length === 0) {
+    return [];
+  }
+
+  const { data: insertedPhotos, error: photosError } = await supabase
+    .from('photos')
+    .insert(
+      newPhotos.map((photo) => ({
+        group_id: groupId,
+        uploaded_by: userId,
+        storage_path: photo.storagePath!,
+        caption: null,
+        taken_at: occurredAt.toISOString(),
+      })),
+    )
+    .select('id');
+
+  if (photosError) {
+    throw new Error(photosError.message);
+  }
+
+  return (insertedPhotos ?? []).map((photo) => photo.id);
+}
+
+function getExistingPhotoIds(photos: EventPhotoInput[]): string[] {
+  return photos
+    .filter((photo) => photo.id && photo.storagePath)
+    .map((photo) => photo.id!);
+}
+
+async function replaceEventPhotos(input: {
+  eventId: string;
+  groupId: string;
+  userId: string;
+  occurredAt: Date;
+  photos: EventPhotoInput[];
+}) {
+  const existingPhotoIds = getExistingPhotoIds(input.photos);
+  const newPhotoIds = await insertPhotos(
+    input.groupId,
+    input.userId,
+    input.occurredAt,
+    input.photos,
+  );
+  const nextPhotoIds = [...existingPhotoIds, ...newPhotoIds];
+  const { error: deleteLinksError } = await supabase
+    .from('event_photos')
+    .delete()
+    .eq('event_id', input.eventId)
+    .eq('group_id', input.groupId);
+
+  if (deleteLinksError) {
+    throw new Error(deleteLinksError.message);
+  }
+
+  if (nextPhotoIds.length === 0) {
+    return;
+  }
+
+  const { error: linksError } = await supabase.from('event_photos').insert(
+    nextPhotoIds.map((photoId, index) => ({
+      group_id: input.groupId,
+      event_id: input.eventId,
+      photo_id: photoId,
+      sort_order: index,
+    })),
+  );
+
+  if (linksError) {
+    throw new Error(linksError.message);
+  }
+}
+
 export async function createEvent(input: CreateEventInput): Promise<string> {
   const userId = await getCurrentUserId();
 
@@ -146,11 +283,7 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
     .insert({
       group_id: input.groupId,
       created_by: userId,
-      title: input.title.trim(),
-      occurred_on: input.occurredAt.toISOString().slice(0, 10),
-      location_text: normalizeOptionalText(input.location),
-      mood: normalizeOptionalText(input.mood),
-      notes: normalizeOptionalText(input.notes),
+      ...normalizeEventRecord(input),
     })
     .select('id')
     .single();
@@ -163,49 +296,81 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
     throw new Error('Could not create event.');
   }
 
-  const persistedPhotoCandidates = input.photos.filter((photo) =>
-    Boolean(photo.storagePath),
-  );
+  await replaceEventPhotos({
+    eventId: insertedEvent.id,
+    groupId: input.groupId,
+    userId,
+    occurredAt: input.occurredAt,
+    photos: input.photos,
+  });
 
-  if (persistedPhotoCandidates.length === 0) {
-    return insertedEvent.id;
+  return insertedEvent.id;
+}
+
+export async function updateEvent(input: UpdateEventInput): Promise<string> {
+  const userId = await getCurrentUserId();
+
+  if (!userId) {
+    throw new Error('You must be signed in to update an event.');
   }
 
-  const { data: insertedPhotos, error: photosError } = await supabase
-    .from('photos')
-    .insert(
-      persistedPhotoCandidates.map((photo) => ({
-        group_id: input.groupId,
-        uploaded_by: userId,
-        storage_path: photo.storagePath!,
-        caption: null,
-        taken_at: input.occurredAt.toISOString(),
-      })),
-    )
-    .select('id');
-
-  if (photosError) {
-    throw new Error(photosError.message);
+  if (!input.groupId) {
+    throw new Error('A group must be selected before updating an event.');
   }
 
-  if (!insertedPhotos?.length) {
-    return insertedEvent.id;
+  const { data: updatedEvent, error: eventError } = await supabase
+    .from('events')
+    .update(normalizeEventRecord(input))
+    .eq('id', input.eventId)
+    .eq('group_id', input.groupId)
+    .select('id')
+    .maybeSingle();
+
+  if (eventError) {
+    throw new Error(eventError.message);
   }
 
-  const { error: linksError } = await supabase.from('event_photos').insert(
-    insertedPhotos.map((photo, index) => ({
-      group_id: input.groupId,
-      event_id: insertedEvent.id,
-      photo_id: photo.id,
-      sort_order: index,
-    })),
-  );
+  if (!updatedEvent?.id) {
+    throw new Error('Could not update event.');
+  }
+
+  await replaceEventPhotos({
+    eventId: updatedEvent.id,
+    groupId: input.groupId,
+    userId,
+    occurredAt: input.occurredAt,
+    photos: input.photos,
+  });
+
+  return updatedEvent.id;
+}
+
+export async function deleteEvent(input: DeleteEventInput): Promise<void> {
+  const userId = await getCurrentUserId();
+
+  if (!userId) {
+    throw new Error('You must be signed in to delete an event.');
+  }
+
+  const { error: linksError } = await supabase
+    .from('event_photos')
+    .delete()
+    .eq('event_id', input.eventId)
+    .eq('group_id', input.groupId);
 
   if (linksError) {
     throw new Error(linksError.message);
   }
 
-  return insertedEvent.id;
+  const { error: eventError } = await supabase
+    .from('events')
+    .delete()
+    .eq('id', input.eventId)
+    .eq('group_id', input.groupId);
+
+  if (eventError) {
+    throw new Error(eventError.message);
+  }
 }
 
 export async function getEventById(
@@ -235,7 +400,7 @@ export async function getEventById(
 
   const { data: links, error: linksError } = await supabase
     .from('event_photos')
-    .select('sort_order, photos(storage_path)')
+    .select('sort_order, photos(id, storage_path)')
     .eq('event_id', eventId)
     .eq('group_id', groupId)
     .order('sort_order', { ascending: true })
@@ -246,8 +411,8 @@ export async function getEventById(
   }
 
   const photos = (links ?? [])
-    .map((link) => resolveStoragePath(link))
-    .filter((path): path is string => Boolean(path));
+    .map((link) => resolveEventDetailPhoto(link))
+    .filter((photo): photo is EventDetailPhoto => Boolean(photo));
 
   return {
     id: event.id,
