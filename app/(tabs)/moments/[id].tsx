@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   typePillText: {
-    color: '#1a1512',
+    color: baseColors.bg,
     fontFamily: textTheme.family.semiBold,
     fontSize: textTheme.size.md,
     lineHeight: textTheme.lineHeight.md,
