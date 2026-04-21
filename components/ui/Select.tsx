@@ -3,13 +3,10 @@ import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { Check, ChevronDown } from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Animated,
-  Easing,
   Modal,
   Pressable,
-  type LayoutChangeEvent,
   ScrollView,
   StyleSheet,
   View,
@@ -27,7 +24,6 @@ export type SelectOption = {
 type SelectProps = {
   options: SelectOption[];
   value?: string;
-  defaultValue?: string;
   placeholder?: string;
   onChange?: (value: string) => void;
   color?: string;
@@ -42,7 +38,6 @@ type SelectProps = {
 export function Select({
   options,
   value,
-  defaultValue,
   placeholder = 'Select an option',
   onChange,
   color = baseColors.text,
@@ -54,112 +49,19 @@ export function Select({
   disabled = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const [internalValue, setInternalValue] = useState(defaultValue);
-  const [sheetHeight, setSheetHeight] = useState(0);
-  const selectedValue = value ?? internalValue;
+  const selectedValue = value;
   const selectedOption = useMemo(
     () => options.find((option) => option.value === selectedValue) ?? null,
     [options, selectedValue],
   );
-  const chevronRotation = useRef(new Animated.Value(0)).current;
-  const drawerProgress = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(chevronRotation, {
-      toValue: isOpen ? 1 : 0,
-      duration: 180,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [chevronRotation, isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsMounted(true);
-      Animated.timing(drawerProgress, {
-        toValue: 1,
-        duration: 260,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-      return;
-    }
-
-    if (!isMounted) {
-      drawerProgress.setValue(0);
-      return;
-    }
-
-    Animated.timing(drawerProgress, {
-      toValue: 0,
-      duration: 220,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        setIsMounted(false);
-      }
-    });
-  }, [drawerProgress, isMounted, isOpen]);
-
-  const chevronAnimatedStyle = useMemo(
-    () => ({
-      transform: [
-        {
-          rotate: chevronRotation.interpolate({
-            inputRange: [0, 1],
-            outputRange: ['0deg', '180deg'],
-          }),
-        },
-      ],
-    }),
-    [chevronRotation],
-  );
-
-  const drawerAnimatedStyle = useMemo(
-    () => ({
-      opacity: drawerProgress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 1],
-      }),
-      transform: [
-        {
-          translateY: drawerProgress.interpolate({
-            inputRange: [0, 1],
-            outputRange: [Math.max(sheetHeight + 32, 320), 0],
-          }),
-        },
-      ],
-    }),
-    [drawerProgress, sheetHeight],
-  );
-
-  const overlayAnimatedStyle = useMemo(
-    () => ({
-      opacity: drawerProgress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 1],
-      }),
-    }),
-    [drawerProgress],
-  );
 
   function handleSelect(nextValue: string) {
-    if (value === undefined) {
-      setInternalValue(nextValue);
-    }
-
     onChange?.(nextValue);
     setIsOpen(false);
   }
 
   const triggerTextColor = selectedOption ? baseColors.text : baseColors.textSoft;
   const isCompactTrigger = size === 'compact' || size === 'header';
-
-  function handleSheetLayout(event: LayoutChangeEvent) {
-    setSheetHeight(event.nativeEvent.layout.height);
-  }
 
   return (
     <View style={style}>
@@ -197,29 +99,35 @@ export function Select({
         >
           {selectedOption?.label ?? placeholder}
         </Text>
-        <Animated.View style={chevronAnimatedStyle}>
+        <View
+          style={{
+            transform: [{ rotate: isOpen ? '180deg' : '0deg' }],
+          }}
+        >
           <ChevronDown
             color={baseColors.text}
             size={size === 'header' ? 16 : 20}
             strokeWidth={2.2}
           />
-        </Animated.View>
+        </View>
       </Pressable>
 
-      <Modal onRequestClose={() => setIsOpen(false)} transparent visible={isMounted}>
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setIsOpen(false)}
+        transparent
+        visible={isOpen}
+      >
         <View style={styles.modalRoot}>
-          <Animated.View style={[styles.overlay, overlayAnimatedStyle]}>
+          <View style={styles.overlay}>
             <Pressable
               accessibilityRole="button"
               onPress={() => setIsOpen(false)}
               style={StyleSheet.absoluteFillObject}
             />
-          </Animated.View>
+          </View>
 
-          <Animated.View
-            onLayout={handleSheetLayout}
-            style={[styles.sheet, drawerAnimatedStyle]}
-          >
+          <View style={styles.sheet}>
             <View style={styles.sheetHandle} />
 
             <View style={styles.sheetHeader}>
@@ -284,7 +192,7 @@ export function Select({
                 );
               })}
             </ScrollView>
-          </Animated.View>
+          </View>
         </View>
       </Modal>
     </View>
