@@ -3,7 +3,12 @@ import { type UserGroup } from '@/services/groups';
 import { baseColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
-import { ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { Select } from './ui/Select';
 import { Text } from './ui/Text';
@@ -43,13 +48,8 @@ export function GroupScopePicker({
   size = 'default',
   style,
 }: GroupScopePickerProps) {
-  const {
-    activeGroupId,
-    errorMessage,
-    groups,
-    isLoading,
-    setActiveGroupId,
-  } = useActiveGroup();
+  const { activeGroupId, errorMessage, groups, isLoading, setActiveGroupId } =
+    useActiveGroup();
 
   if (isLoading) {
     return (

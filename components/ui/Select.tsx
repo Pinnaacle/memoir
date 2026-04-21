@@ -71,10 +71,7 @@ function animateDrawerClose(
   );
 }
 
-function useDrawerAnimation(
-  windowHeight: number,
-  onCloseComplete: () => void,
-) {
+function useDrawerAnimation(windowHeight: number, onCloseComplete: () => void) {
   const drawerProgress = useSharedValue(0);
 
   const backdropAnimatedStyle = useAnimatedStyle(() => ({
@@ -140,7 +137,9 @@ export function Select({
     closeDrawer();
   }
 
-  const triggerTextColor = selectedOption ? baseColors.text : baseColors.textSoft;
+  const triggerTextColor = selectedOption
+    ? baseColors.text
+    : baseColors.textSoft;
   const isCompactTrigger = size === 'compact' || size === 'header';
 
   return (
@@ -199,11 +198,7 @@ export function Select({
         </View>
       </Pressable>
 
-      <Modal
-        onRequestClose={closeDrawer}
-        transparent
-        visible={isOpen}
-      >
+      <Modal onRequestClose={closeDrawer} transparent visible={isOpen}>
         <View style={styles.modalRoot}>
           <Animated.View style={[styles.overlay, backdropAnimatedStyle]}>
             <Pressable
@@ -271,7 +266,11 @@ export function Select({
                       ]}
                     >
                       {isSelected ? (
-                        <Check color={baseColors.bg} size={14} strokeWidth={3} />
+                        <Check
+                          color={baseColors.bg}
+                          size={14}
+                          strokeWidth={3}
+                        />
                       ) : null}
                     </View>
                   </Pressable>

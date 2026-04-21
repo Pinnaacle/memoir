@@ -44,8 +44,11 @@ function formatMomentType(value: string | null): string {
 }
 
 export default function MomentsScreen() {
-  const { activeGroup, errorMessage: groupError, isLoading: isLoadingGroups } =
-    useActiveGroup();
+  const {
+    activeGroup,
+    errorMessage: groupError,
+    isLoading: isLoadingGroups,
+  } = useActiveGroup();
   const momentsQuery = useMomentsQuery(activeGroup?.id);
   const moments = momentsQuery.data ?? [];
   const loadError =
@@ -58,7 +61,7 @@ export default function MomentsScreen() {
   const activeGroupLabel =
     activeGroup?.groupKind === 'personal'
       ? 'Personal'
-      : activeGroup?.name ?? 'this space';
+      : (activeGroup?.name ?? 'this space');
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

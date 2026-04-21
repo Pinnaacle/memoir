@@ -68,7 +68,9 @@ async function getCurrentUserId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
-export async function listEventsForGroup(groupId: string): Promise<EventListItem[]> {
+export async function listEventsForGroup(
+  groupId: string,
+): Promise<EventListItem[]> {
   const userId = await getCurrentUserId();
 
   if (!userId || !groupId) {

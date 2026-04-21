@@ -3,11 +3,7 @@ import {
   getEventById,
   listEventsForGroup,
 } from '@/services/events';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export const eventKeys = {
   all: ['events'] as const,
@@ -22,14 +18,12 @@ export const eventKeys = {
 export function useEventsQuery(groupId?: string | null) {
   return useQuery({
     queryKey: eventKeys.list(groupId ?? null),
-    queryFn: () => (groupId ? listEventsForGroup(groupId) : Promise.resolve([])),
+    queryFn: () =>
+      groupId ? listEventsForGroup(groupId) : Promise.resolve([]),
   });
 }
 
-export function useEventDetailQuery(
-  eventId?: string,
-  groupId?: string | null,
-) {
+export function useEventDetailQuery(eventId?: string, groupId?: string | null) {
   const resolvedGroupId = groupId ?? null;
 
   return useQuery({

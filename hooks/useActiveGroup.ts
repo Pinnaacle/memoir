@@ -7,7 +7,9 @@ export function useActiveGroup() {
   const activeGroupId = useActiveGroupStore((state) => state.activeGroupId);
   const hasHydrated = useActiveGroupStore((state) => state.hasHydrated);
   const hydrate = useActiveGroupStore((state) => state.hydrate);
-  const setActiveGroupId = useActiveGroupStore((state) => state.setActiveGroupId);
+  const setActiveGroupId = useActiveGroupStore(
+    (state) => state.setActiveGroupId,
+  );
 
   useEffect(() => {
     void hydrate();
@@ -53,7 +55,8 @@ export function useActiveGroup() {
   ]);
 
   const activeGroup = useMemo(
-    () => groups.find((group) => group.id === activeGroupId) ?? groups[0] ?? null,
+    () =>
+      groups.find((group) => group.id === activeGroupId) ?? groups[0] ?? null,
     [activeGroupId, groups],
   );
   const errorMessage =
