@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/Card';
-import Header from '@/components/ui/Header';
 import { Text } from '@/components/ui/Text';
+import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useEventsQuery } from '@/hooks/useEvents';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
@@ -8,10 +8,10 @@ import { text } from '@/theme/type';
 import { type Href, Link } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
   View,
 } from 'react-native';
 
@@ -32,46 +32,54 @@ function formatOccurredOn(dateValue: string): string {
 }
 
 export default function EventsIndexScreen() {
-  const eventsQuery = useEventsQuery();
+  const {
+    activeGroup,
+    errorMessage: groupError,
+    isLoading: isLoadingGroups,
+  } = useActiveGroup();
+  const eventsQuery = useEventsQuery(activeGroup?.id);
 
   const events = eventsQuery.data ?? [];
   const loadError =
-    eventsQuery.error instanceof Error
+    groupError ??
+    (eventsQuery.error instanceof Error
       ? eventsQuery.error.message
       : eventsQuery.error
         ? 'Failed to load events.'
-        : null;
+        : null);
+  const activeGroupLabel =
+    activeGroup?.groupKind === 'personal'
+      ? 'Personal'
+      : (activeGroup?.name ?? 'this space');
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Events"
-        color={sectionColors.events}
-        tagLine="Insert very meaningful text here"
-      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {eventsQuery.isPending ? (
+        {isLoadingGroups || eventsQuery.isPending ? (
           <ActivityIndicator
             color={sectionColors.events}
             style={styles.loader}
           />
         ) : null}
 
-        {!eventsQuery.isPending && loadError ? (
+        {!isLoadingGroups && !eventsQuery.isPending && loadError ? (
           <Text style={styles.errorText}>{loadError}</Text>
         ) : null}
 
-        {!eventsQuery.isPending && !loadError && events.length === 0 ? (
+        {!isLoadingGroups &&
+        !eventsQuery.isPending &&
+        !loadError &&
+        events.length === 0 ? (
           <Text style={styles.emptyText}>
-            No events yet. Tap + to create your first one.
+            No events in {activeGroupLabel} yet. Tap + to create your first one.
           </Text>
         ) : null}
 
-        {!eventsQuery.isPending && !loadError
+        {!isLoadingGroups && !eventsQuery.isPending && !loadError
           ? events.map((event) => (
               <Link asChild href={`/events/${event.id}` as Href} key={event.id}>
                 <Pressable
@@ -147,6 +155,7 @@ const styles = StyleSheet.create({
   createButton: {
     alignItems: 'center',
     backgroundColor: sectionColors.events,
+    boxShadow: '0px 8px 18px rgba(0, 0, 0, 0.18)',
     borderRadius: 999,
     bottom: 20,
     height: 60,
@@ -154,10 +163,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute',
     right: space.xl,
-    shadowColor: baseColors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 4,
   },
 });

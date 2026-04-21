@@ -1,14 +1,10 @@
-import {
-  getSignedImageUrlMap,
-  MAX_IMAGES_PER_UPLOAD,
-} from '@/lib/images';
+import { getSignedImageUrlMap, MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 import {
   getCurrentUserId,
-  getPersonalGroupIdForUser,
   type JoinedPhoto,
   requireCurrentUserId,
-  resolvePhotoStoragePath,
+  resolvePhotoStoragePath
 } from '@/services/userContext';
 
 export type MomentPhotoInput = {
@@ -16,6 +12,7 @@ export type MomentPhotoInput = {
 };
 
 export type CreateMomentInput = {
+  groupId: string;
   momentType: string;
   title: string;
   description: string;
@@ -46,17 +43,19 @@ type MomentPhotoLink = {
   photos?: JoinedPhoto;
 };
 
-export async function listMomentsForCurrentUser(): Promise<MomentListItem[]> {
+export async function listMomentsForGroup(
+  groupId: string,
+): Promise<MomentListItem[]> {
   const userId = await getCurrentUserId();
 
-  if (!userId) {
+  if (!userId || !groupId) {
     return [];
   }
 
   const { data: moments, error } = await supabase
     .from('moments')
     .select('id, title, description, category, occurred_on, created_at')
-    .eq('created_by', userId)
+    .eq('group_id', groupId)
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -121,12 +120,14 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
   const userId = await requireCurrentUserId(
     'You must be signed in to create a moment.',
   );
-  const groupId = await getPersonalGroupIdForUser(userId);
+  if (!input.groupId) {
+    throw new Error('A group must be selected before creating a moment.');
+  }
 
   const { data: insertedMoment, error: momentError } = await supabase
     .from('moments')
     .insert({
-      group_id: groupId,
+      group_id: input.groupId,
       created_by: userId,
       category: input.momentType,
       title: input.title.trim(),
@@ -156,7 +157,7 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
     .from('photos')
     .insert(
       persistedPhotoCandidates.map((photo) => ({
-        group_id: groupId,
+        group_id: input.groupId,
         uploaded_by: userId,
         storage_path: photo.storagePath!,
         caption: null,
@@ -175,7 +176,7 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
 
   const { error: linksError } = await supabase.from('moment_photos').insert(
     insertedPhotos.map((photo, index) => ({
-      group_id: groupId,
+      group_id: input.groupId,
       moment_id: insertedMoment.id,
       photo_id: photo.id,
       sort_order: index,
@@ -191,6 +192,7 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
 
 export async function getMomentById(
   momentId: string,
+  groupId: string,
 ): Promise<MomentDetail | null> {
   const userId = await getCurrentUserId();
 
@@ -202,7 +204,7 @@ export async function getMomentById(
     .from('moments')
     .select('id, title, description, category, occurred_on')
     .eq('id', momentId)
-    .eq('created_by', userId)
+    .eq('group_id', groupId)
     .maybeSingle();
 
   if (momentError) {
@@ -217,6 +219,7 @@ export async function getMomentById(
     .from('moment_photos')
     .select('sort_order, photos(storage_path)')
     .eq('moment_id', momentId)
+    .eq('group_id', groupId)
     .order('sort_order', { ascending: true });
 
   if (linksError) {

@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/Card';
 import { Text } from '@/components/ui/Text';
+import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useMomentsQuery } from '@/hooks/useMoments';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
@@ -43,14 +44,24 @@ function formatMomentType(value: string | null): string {
 }
 
 export default function MomentsScreen() {
-  const momentsQuery = useMomentsQuery();
+  const {
+    activeGroup,
+    errorMessage: groupError,
+    isLoading: isLoadingGroups,
+  } = useActiveGroup();
+  const momentsQuery = useMomentsQuery(activeGroup?.id);
   const moments = momentsQuery.data ?? [];
   const loadError =
-    momentsQuery.error instanceof Error
+    groupError ??
+    (momentsQuery.error instanceof Error
       ? momentsQuery.error.message
       : momentsQuery.error
         ? 'Failed to load moments.'
-        : null;
+        : null);
+  const activeGroupLabel =
+    activeGroup?.groupKind === 'personal'
+      ? 'Personal'
+      : (activeGroup?.name ?? 'this space');
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -59,24 +70,28 @@ export default function MomentsScreen() {
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
-        {momentsQuery.isPending ? (
+        {isLoadingGroups || momentsQuery.isPending ? (
           <ActivityIndicator
             color={sectionColors.moments}
             style={styles.loader}
           />
         ) : null}
 
-        {!momentsQuery.isPending && loadError ? (
+        {!isLoadingGroups && !momentsQuery.isPending && loadError ? (
           <Text style={styles.errorText}>{loadError}</Text>
         ) : null}
 
-        {!momentsQuery.isPending && !loadError && moments.length === 0 ? (
+        {!isLoadingGroups &&
+        !momentsQuery.isPending &&
+        !loadError &&
+        moments.length === 0 ? (
           <Text style={styles.emptyText}>
-            No moments yet. Tap + to create your first one.
+            No moments in {activeGroupLabel} yet. Tap + to create your first
+            one.
           </Text>
         ) : null}
 
-        {!momentsQuery.isPending && !loadError
+        {!isLoadingGroups && !momentsQuery.isPending && !loadError
           ? moments.map((moment) => (
               <Link
                 asChild
@@ -153,6 +168,7 @@ const styles = StyleSheet.create({
   createButton: {
     alignItems: 'center',
     backgroundColor: sectionColors.moments,
+    boxShadow: '0px 8px 18px rgba(0, 0, 0, 0.18)',
     borderRadius: 999,
     bottom: 20,
     height: 60,
@@ -160,10 +176,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute',
     right: space.xl,
-    shadowColor: baseColors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 4,
   },
 });

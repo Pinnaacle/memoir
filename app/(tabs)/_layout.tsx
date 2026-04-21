@@ -1,7 +1,12 @@
 import Header, { TAB_HEADER_CONTENT_HEIGHT } from '@/components/ui/Header';
+import { eventKeys } from '@/hooks/useEvents';
+import { momentKeys } from '@/hooks/useMoments';
+import { useActiveGroupStore } from '@/stores/useActiveGroupStore';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { Tabs } from 'expo-router';
 import { CalendarDays, Heart, House, Image, Star } from 'lucide-react-native';
+import { useEffect, useRef } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { baseColors, sectionColors } from '../../theme/colors';
 import { text } from '../../theme/type';
@@ -33,6 +38,24 @@ const headerTagLineByRoute: Record<string, string | undefined> = {
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + TAB_HEADER_CONTENT_HEIGHT;
+  const queryClient = useQueryClient();
+  const activeGroupId = useActiveGroupStore((state) => state.activeGroupId);
+  const previousActiveGroupIdRef = useRef(activeGroupId);
+
+  useEffect(() => {
+    if (previousActiveGroupIdRef.current === activeGroupId) {
+      return;
+    }
+
+    previousActiveGroupIdRef.current = activeGroupId;
+
+    void queryClient.invalidateQueries({
+      queryKey: momentKeys.all,
+    });
+    void queryClient.invalidateQueries({
+      queryKey: eventKeys.all,
+    });
+  }, [activeGroupId, queryClient]);
 
   return (
     <Tabs
@@ -93,7 +116,6 @@ export default function TabLayout() {
         name="events"
         options={{
           title: 'Events',
-          headerShown: false,
           tabBarActiveTintColor: sectionColors.events,
           tabBarIcon: ({ color }) => <CalendarDays color={color} size={24} />,
         }}

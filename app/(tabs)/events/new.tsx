@@ -8,6 +8,7 @@ import Chip from '@/components/ui/Chip';
 import Divider from '@/components/ui/Divider';
 import { Field, Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
+import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useCreateEventMutation } from '@/hooks/useEvents';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
@@ -62,6 +63,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 export default function NewEventScreen() {
+  const { activeGroup } = useActiveGroup();
   const [photos, setPhotos] = useState<SelectedImage[]>([]);
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -96,6 +98,10 @@ export default function NewEventScreen() {
         throw new Error(parsed.error.issues[0]?.message ?? 'Invalid input.');
       }
 
+      if (!activeGroup?.id) {
+        throw new Error('Choose a space before saving this event.');
+      }
+
       const uploadedPhotos = photos
         .filter(
           (photo) =>
@@ -107,6 +113,7 @@ export default function NewEventScreen() {
       try {
         await createEventMutation.mutateAsync({
           ...parsed.data,
+          groupId: activeGroup.id,
           photos: uploadedPhotos,
         });
       } catch (error) {
@@ -154,6 +161,11 @@ export default function NewEventScreen() {
           ? `Some photos failed to upload: ${firstFailedUploadError}`
           : 'Some photos failed to upload. Remove or retry them before saving.',
       );
+      return;
+    }
+
+    if (!activeGroup?.id) {
+      setSaveError('Choose a space before saving this event.');
       return;
     }
 

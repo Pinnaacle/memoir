@@ -22,5 +22,6 @@ export const text = {
     sm: 18,
     lg: 28,
     xl: 32,
+    xxl: 36,
   },
 };

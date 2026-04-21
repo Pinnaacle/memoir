@@ -1,3 +1,4 @@
+import { GroupScopePicker } from '@/components/GroupScopePicker';
 import { Text } from '@/components/ui/Text';
 import { baseColors } from '@/theme/colors';
 import { space } from '@/theme/space';
@@ -13,7 +14,7 @@ interface HeaderProps {
   height?: number;
 }
 
-export const TAB_HEADER_CONTENT_HEIGHT = 88;
+export const TAB_HEADER_CONTENT_HEIGHT = 108;
 
 export default function Header({ title, tagLine, color, height }: HeaderProps) {
   return (
@@ -30,7 +31,14 @@ export default function Header({ title, tagLine, color, height }: HeaderProps) {
           >
             {title}
           </Text>
-          <CircleUser color={baseColors.text} size={24} />
+          <View style={styles.actions}>
+            <GroupScopePicker
+              color={color ?? baseColors.text}
+              sheetTitle="Switch space"
+              size="header"
+            />
+            <CircleUser color={baseColors.text} size={24} />
+          </View>
         </View>
         {tagLine && <Text style={styles.tagLine}>{tagLine}</Text>}
       </View>
@@ -44,24 +52,29 @@ const styles = StyleSheet.create({
     paddingTop: space.lg,
   },
   headerContainer: {
-    marginBottom: space.lg,
+    marginBottom: space.md,
     marginHorizontal: space.lg,
     gap: space.sm,
   },
   titleContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingBottom: space.sm,
+    paddingBottom: space.xs,
   },
   title: {
     color: baseColors.text,
-    fontSize: textTheme.size.xl,
+    fontSize: textTheme.size.xxl,
     fontFamily: textTheme.family.bold,
+  },
+  actions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: space.sm,
   },
   tagLine: {
     color: baseColors.textSoft,
-    fontSize: textTheme.size.sm,
+    fontSize: textTheme.size.md,
     fontFamily: textTheme.family.regularItalic,
   },
 });
