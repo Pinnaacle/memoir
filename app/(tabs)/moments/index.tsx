@@ -151,6 +151,7 @@ const styles = StyleSheet.create({
   createButton: {
     alignItems: 'center',
     backgroundColor: sectionColors.moments,
+    boxShadow: '0px 8px 18px rgba(0, 0, 0, 0.18)',
     borderRadius: 999,
     bottom: 20,
     height: 60,
@@ -158,10 +159,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute',
     right: space.xl,
-    shadowColor: baseColors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 4,
   },
 });

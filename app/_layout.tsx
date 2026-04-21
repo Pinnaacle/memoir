@@ -36,28 +36,38 @@ export default function RootLayout() {
     PlusJakartaSans_500Medium_Italic,
     PlusJakartaSans_400Regular_Italic,
   });
-  const [sessionReady, setSessionReady] = useState(false);
-  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [authState, setAuthState] = useState({
+    isSignedIn: false,
+    sessionReady: false,
+  });
   const segments = useSegments();
 
   useEffect(() => {
     let isMounted = true;
 
     (async () => {
+      let nextIsSignedIn = false;
+
       try {
         const session = await getSession();
-        if (isMounted) {
-          setIsSignedIn(Boolean(session));
-        }
-      } finally {
-        if (isMounted) {
-          setSessionReady(true);
-        }
+        nextIsSignedIn = Boolean(session);
+      } catch {
+        nextIsSignedIn = false;
+      }
+
+      if (isMounted) {
+        setAuthState({
+          isSignedIn: nextIsSignedIn,
+          sessionReady: true,
+        });
       }
     })();
 
     const unsubscribe = onAuthStateChange((_, session) => {
-      setIsSignedIn(Boolean(session));
+      setAuthState((current) => ({
+        ...current,
+        isSignedIn: Boolean(session),
+      }));
     });
 
     if (AppState.currentState === 'active') {
@@ -85,7 +95,7 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (!loaded || !sessionReady) {
+  if (!loaded || !authState.sessionReady) {
     return null;
   }
 
@@ -94,11 +104,11 @@ export default function RootLayout() {
     currentRootSegment === 'sign-in' || currentRootSegment === 'sign-up';
   const isNotFoundRoute = currentRootSegment === '+not-found';
 
-  if (!isSignedIn && !inAuthFlow && !isNotFoundRoute) {
+  if (!authState.isSignedIn && !inAuthFlow && !isNotFoundRoute) {
     return <Redirect href="/sign-in" />;
   }
 
-  if (isSignedIn && inAuthFlow) {
+  if (authState.isSignedIn && inAuthFlow) {
     return <Redirect href="/(tabs)" />;
   }
 
