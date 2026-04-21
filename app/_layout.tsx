@@ -1,4 +1,5 @@
 import { getSession, onAuthStateChange } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_400Regular_Italic,
@@ -12,6 +13,7 @@ import { useFonts } from 'expo-font';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { baseColors } from '../theme/colors';
 
@@ -58,9 +60,25 @@ export default function RootLayout() {
       setIsSignedIn(Boolean(session));
     });
 
+    if (AppState.currentState === 'active') {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        supabase.auth.startAutoRefresh();
+        return;
+      }
+
+      supabase.auth.stopAutoRefresh();
+    });
+
     return () => {
       isMounted = false;
       unsubscribe();
+      appStateSubscription.remove();
     };
   }, []);
 
