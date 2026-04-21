@@ -1,5 +1,4 @@
 import { Card } from '@/components/ui/Card';
-import Header from '@/components/ui/Header';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useEventsQuery } from '@/hooks/useEvents';
@@ -9,10 +8,10 @@ import { text } from '@/theme/type';
 import { type Href, Link } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
   View,
 } from 'react-native';
 
@@ -33,8 +32,11 @@ function formatOccurredOn(dateValue: string): string {
 }
 
 export default function EventsIndexScreen() {
-  const { activeGroup, errorMessage: groupError, isLoading: isLoadingGroups } =
-    useActiveGroup();
+  const {
+    activeGroup,
+    errorMessage: groupError,
+    isLoading: isLoadingGroups,
+  } = useActiveGroup();
   const eventsQuery = useEventsQuery(activeGroup?.id);
 
   const events = eventsQuery.data ?? [];
@@ -48,15 +50,10 @@ export default function EventsIndexScreen() {
   const activeGroupLabel =
     activeGroup?.groupKind === 'personal'
       ? 'Personal'
-      : activeGroup?.name ?? 'this space';
+      : (activeGroup?.name ?? 'this space');
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Events"
-        color={sectionColors.events}
-        tagLine="Insert very meaningful text here"
-      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -73,10 +70,12 @@ export default function EventsIndexScreen() {
           <Text style={styles.errorText}>{loadError}</Text>
         ) : null}
 
-        {!isLoadingGroups && !eventsQuery.isPending && !loadError && events.length === 0 ? (
+        {!isLoadingGroups &&
+        !eventsQuery.isPending &&
+        !loadError &&
+        events.length === 0 ? (
           <Text style={styles.emptyText}>
-            No events in {activeGroupLabel} yet. Tap + to create your first
-            one.
+            No events in {activeGroupLabel} yet. Tap + to create your first one.
           </Text>
         ) : null}
 
