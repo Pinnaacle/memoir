@@ -66,14 +66,17 @@ export default function RootLayout() {
       supabase.auth.stopAutoRefresh();
     }
 
-    const appStateSubscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        supabase.auth.startAutoRefresh();
-        return;
-      }
+    const appStateSubscription = AppState.addEventListener(
+      'change',
+      (state) => {
+        if (state === 'active') {
+          supabase.auth.startAutoRefresh();
+          return;
+        }
 
-      supabase.auth.stopAutoRefresh();
-    });
+        supabase.auth.stopAutoRefresh();
+      },
+    );
 
     return () => {
       isMounted = false;
