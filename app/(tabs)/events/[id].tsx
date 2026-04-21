@@ -47,8 +47,9 @@ export default function EventDetailScreen() {
   const displayDate = eventQuery.data?.occurredOn
     ? formatOccurredOn(eventQuery.data.occurredOn)
     : '';
-  const heroImageSource = eventQuery.data?.photos[0]
-    ? { uri: eventQuery.data.photos[0] }
+  const heroImageUrl = eventQuery.data?.photos[0] ?? null;
+  const heroImageSource = heroImageUrl
+    ? { uri: heroImageUrl }
     : FALLBACK_COVER_IMAGE;
   const photoThumbs = eventQuery.data?.photos.slice(0, 3) ?? [];
   const loadError =

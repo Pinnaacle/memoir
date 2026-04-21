@@ -1,3 +1,4 @@
+import { MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
@@ -6,6 +7,7 @@ import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import {
+  AlertTriangle,
   Camera,
   ChevronLeft,
   ChevronRight,
@@ -14,6 +16,7 @@ import {
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   LayoutChangeEvent,
   Modal,
@@ -32,7 +35,7 @@ import { Text } from './Text';
 
 export type ImageUploadStatus = 'local' | 'uploading' | 'uploaded' | 'failed';
 
-const DEFAULT_MAX_IMAGES = 6;
+const DEFAULT_MAX_IMAGES = MAX_IMAGES_PER_UPLOAD;
 const GRID_COLUMNS = 3;
 const GRID_GAP = space.md;
 
@@ -46,8 +49,8 @@ export type SelectedImage = {
   height?: number;
   fileSize?: number;
   storagePath?: string | null;
-  publicUrl?: string | null;
   uploadStatus?: ImageUploadStatus;
+  uploadError?: string | null;
 };
 
 interface AddImageFieldProps extends ViewProps {
@@ -77,8 +80,8 @@ function createSelectedImage(
     height: asset.height > 0 ? asset.height : undefined,
     fileSize: asset.fileSize,
     storagePath: null,
-    publicUrl: null,
     uploadStatus: 'local',
+    uploadError: null,
   };
 }
 
@@ -151,7 +154,15 @@ export function AddImageField({
   }
 
   async function handleAddImages() {
-    if (!isEditable || !onChange || isDisabled || !canAddMore) {
+    if (!isEditable || !onChange || isDisabled) {
+      return;
+    }
+
+    if (!canAddMore) {
+      Alert.alert(
+        'Photo limit reached',
+        `You can attach up to ${resolvedMaxImages} photos.`,
+      );
       return;
     }
 
@@ -315,10 +326,26 @@ export function AddImageField({
                 ]}
               >
                 <Image
-                  source={{ uri: image.publicUrl ?? image.uri }}
+                  source={{ uri: image.uri }}
                   style={styles.preview}
                   contentFit="cover"
                 />
+
+                {image.uploadStatus === 'uploading' ? (
+                  <View style={styles.statusOverlay}>
+                    <ActivityIndicator color={baseColors.text} size="small" />
+                  </View>
+                ) : null}
+
+                {image.uploadStatus === 'failed' ? (
+                  <View style={[styles.statusOverlay, styles.statusOverlayError]}>
+                    <AlertTriangle
+                      color={baseColors.text}
+                      size={20}
+                      strokeWidth={2.25}
+                    />
+                  </View>
+                ) : null}
               </Pressable>
 
               {isEditable ? (
@@ -423,7 +450,7 @@ export function AddImageField({
             <View style={styles.viewerImageFrame}>
               {activeImage ? (
                 <Image
-                  source={{ uri: activeImage.publicUrl ?? activeImage.uri }}
+                  source={{ uri: activeImage.uri }}
                   style={styles.viewerImage}
                   contentFit="contain"
                 />
@@ -476,7 +503,7 @@ export function AddImageField({
                   ]}
                 >
                   <Image
-                    source={{ uri: image.publicUrl ?? image.uri }}
+                    source={{ uri: image.uri }}
                     style={styles.viewerThumbnailImage}
                     contentFit="cover"
                   />
@@ -559,6 +586,19 @@ const styles = StyleSheet.create({
   preview: {
     height: '100%',
     width: '100%',
+  },
+  statusOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 13, 12, 0.55)',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  statusOverlayError: {
+    backgroundColor: 'rgba(142, 35, 35, 0.65)',
   },
   removeButton: {
     alignItems: 'center',

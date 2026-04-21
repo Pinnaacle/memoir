@@ -9,7 +9,9 @@ import { Dropdown } from '@/components/ui/Dropdown';
 import { Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
+import { useImageUpload } from '@/hooks/useImageUpload';
 import { useCreateMomentMutation } from '@/hooks/useMoments';
+import { MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import {
   type CreateMomentValues,
   createMomentSchema,
@@ -24,6 +26,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -32,7 +35,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SAVE_TIMEOUT_MS = 10000;
 
-//Timeout for failed submissions
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timeoutId = setTimeout(() => {
@@ -59,6 +61,19 @@ export default function NewMomentScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const createMomentMutation = useCreateMomentMutation();
+  const { startUpload } = useImageUpload({
+    bucket: 'moments',
+    setImages: setPhotos,
+  });
+  const isUploading = photos.some(
+    (photo) => photo.uploadStatus === 'uploading',
+  );
+  const failedUploads = photos.filter(
+    (photo) => photo.uploadStatus === 'failed',
+  );
+  const hasFailedUploads = failedUploads.length > 0;
+  const firstFailedUploadError =
+    failedUploads.find((photo) => Boolean(photo.uploadError))?.uploadError ?? null;
 
   const momentTypeOptions = [
     { label: 'Food', value: 'food' },
@@ -87,11 +102,19 @@ export default function NewMomentScreen() {
         throw new Error('Choose a space before saving this moment.');
       }
 
+      const uploadedPhotos = photos
+        .filter(
+          (photo) =>
+            photo.uploadStatus === 'uploaded' && Boolean(photo.storagePath),
+        )
+        .slice(0, MAX_IMAGES_PER_UPLOAD)
+        .map((photo) => ({ storagePath: photo.storagePath! }));
+
       try {
         await createMomentMutation.mutateAsync({
           ...parsed.data,
           groupId: activeGroup.id,
-          photos,
+          photos: uploadedPhotos,
         });
       } catch (error) {
         if (error instanceof Error) {
@@ -127,6 +150,20 @@ export default function NewMomentScreen() {
 
     if (!activeGroup?.id) {
       setSaveError('Choose a space before saving this moment.');
+      return;
+    }
+
+    if (isUploading) {
+      setSaveError('Please wait for photos to finish uploading.');
+      return;
+    }
+
+    if (hasFailedUploads) {
+      setSaveError(
+        firstFailedUploadError
+          ? `Some photos failed to upload: ${firstFailedUploadError}`
+          : 'Some photos failed to upload. Remove or retry them before saving.',
+      );
       return;
     }
 
@@ -232,9 +269,31 @@ export default function NewMomentScreen() {
 
             <AddImageField
               color={sectionColors.moments}
+              maxImages={MAX_IMAGES_PER_UPLOAD}
               onChange={setPhotos}
+              onRequestUpload={startUpload}
               value={photos}
             />
+
+            {hasFailedUploads ? (
+              <Pressable
+                accessibilityHint="Retries failed photo uploads"
+                accessibilityLabel="Retry failed uploads"
+                accessibilityRole="button"
+                disabled={isUploading || isSaving}
+                onPress={() => {
+                  setSaveError(null);
+                  void startUpload(failedUploads);
+                }}
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed ? styles.retryButtonPressed : null,
+                  isUploading || isSaving ? styles.retryButtonDisabled : null,
+                ]}
+              >
+                <Text style={styles.retryButtonText}>Retry failed uploads</Text>
+              </Pressable>
+            ) : null}
 
             {submitError ? (
               <Text style={styles.errorText}>{submitError}</Text>
@@ -287,5 +346,25 @@ const styles = StyleSheet.create({
     fontFamily: textTheme.family.medium,
     fontSize: textTheme.size.sm,
     lineHeight: textTheme.lineHeight.sm,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    borderColor: sectionColors.moments,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs,
+  },
+  retryButtonText: {
+    color: sectionColors.moments,
+    fontFamily: textTheme.family.semiBold,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
+  },
+  retryButtonPressed: {
+    opacity: 0.82,
+  },
+  retryButtonDisabled: {
+    opacity: 0.45,
   },
 });

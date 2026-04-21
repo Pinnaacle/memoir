@@ -10,6 +10,8 @@ import { Field, Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useCreateEventMutation } from '@/hooks/useEvents';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import {
   createEventSchema,
   type CreateEventValues,
@@ -24,6 +26,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -66,6 +69,19 @@ export default function NewEventScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const createEventMutation = useCreateEventMutation();
+  const { startUpload } = useImageUpload({
+    bucket: 'events',
+    setImages: setPhotos,
+  });
+  const isUploading = photos.some(
+    (photo) => photo.uploadStatus === 'uploading',
+  );
+  const failedUploads = photos.filter(
+    (photo) => photo.uploadStatus === 'failed',
+  );
+  const hasFailedUploads = failedUploads.length > 0;
+  const firstFailedUploadError =
+    failedUploads.find((photo) => Boolean(photo.uploadError))?.uploadError ?? null;
 
   const form = useForm({
     defaultValues: {
@@ -86,11 +102,19 @@ export default function NewEventScreen() {
         throw new Error('Choose a space before saving this event.');
       }
 
+      const uploadedPhotos = photos
+        .filter(
+          (photo) =>
+            photo.uploadStatus === 'uploaded' && Boolean(photo.storagePath),
+        )
+        .slice(0, MAX_IMAGES_PER_UPLOAD)
+        .map((photo) => ({ storagePath: photo.storagePath! }));
+
       try {
         await createEventMutation.mutateAsync({
           ...parsed.data,
           groupId: activeGroup.id,
-          photos,
+          photos: uploadedPhotos,
         });
       } catch (error) {
         if (error instanceof Error) {
@@ -123,6 +147,20 @@ export default function NewEventScreen() {
     const parsed = createEventSchema.safeParse(form.state.values);
 
     if (!parsed.success) {
+      return;
+    }
+
+    if (isUploading) {
+      setSaveError('Please wait for photos to finish uploading.');
+      return;
+    }
+
+    if (hasFailedUploads) {
+      setSaveError(
+        firstFailedUploadError
+          ? `Some photos failed to upload: ${firstFailedUploadError}`
+          : 'Some photos failed to upload. Remove or retry them before saving.',
+      );
       return;
     }
 
@@ -256,9 +294,31 @@ export default function NewEventScreen() {
 
             <AddImageField
               color={sectionColors.events}
+              maxImages={MAX_IMAGES_PER_UPLOAD}
               onChange={setPhotos}
+              onRequestUpload={startUpload}
               value={photos}
             />
+
+            {hasFailedUploads ? (
+              <Pressable
+                accessibilityHint="Retries failed photo uploads"
+                accessibilityLabel="Retry failed uploads"
+                accessibilityRole="button"
+                disabled={isUploading || isSaving}
+                onPress={() => {
+                  setSaveError(null);
+                  void startUpload(failedUploads);
+                }}
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed ? styles.retryButtonPressed : null,
+                  isUploading || isSaving ? styles.retryButtonDisabled : null,
+                ]}
+              >
+                <Text style={styles.retryButtonText}>Retry failed uploads</Text>
+              </Pressable>
+            ) : null}
 
             {submitError ? (
               <Text style={styles.errorText}>{submitError}</Text>
@@ -320,5 +380,25 @@ const styles = StyleSheet.create({
     fontFamily: textTheme.family.medium,
     fontSize: textTheme.size.sm,
     lineHeight: textTheme.lineHeight.sm,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    borderColor: sectionColors.events,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs,
+  },
+  retryButtonText: {
+    color: sectionColors.events,
+    fontFamily: textTheme.family.semiBold,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
+  },
+  retryButtonPressed: {
+    opacity: 0.82,
+  },
+  retryButtonDisabled: {
+    opacity: 0.45,
   },
 });

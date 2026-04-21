@@ -1,4 +1,11 @@
+import { getSignedImageUrlMap, MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
+import {
+  getCurrentUserId,
+  type JoinedPhoto,
+  requireCurrentUserId,
+  resolvePhotoStoragePath
+} from '@/services/userContext';
 
 export type MomentPhotoInput = {
   storagePath?: string | null;
@@ -31,34 +38,10 @@ export type MomentDetail = {
   photos: string[];
 };
 
-type LinkedPhotoRow = {
+type MomentPhotoLink = {
   moment_id?: string | null;
-  photos?:
-    | { storage_path?: string | null }
-    | { storage_path?: string | null }[]
-    | null;
+  photos?: JoinedPhoto;
 };
-
-function resolveStoragePath(link: LinkedPhotoRow): string | null {
-  const relatedPhoto = Array.isArray(link.photos)
-    ? link.photos[0]
-    : link.photos;
-
-  return relatedPhoto?.storage_path ?? null;
-}
-
-async function getCurrentUserId(): Promise<string | null> {
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return user?.id ?? null;
-}
 
 export async function listMomentsForGroup(
   groupId: string,
@@ -98,36 +81,45 @@ export async function listMomentsForGroup(
     throw new Error(linksError.message);
   }
 
-  const coverImageByMomentId = new Map<string, string>();
+  const coverPathByMomentId = new Map<string, string>();
 
-  for (const link of (links ?? []) as LinkedPhotoRow[]) {
-    const momentId = link.moment_id;
-    const storagePath = resolveStoragePath(link);
+  for (const link of (links ?? []) as MomentPhotoLink[]) {
+    const storagePath = resolvePhotoStoragePath(link.photos);
 
-    if (!momentId || !storagePath || coverImageByMomentId.has(momentId)) {
-      continue;
-    }
+    if (!link.moment_id || !storagePath) continue;
+    if (coverPathByMomentId.has(link.moment_id)) continue;
 
-    coverImageByMomentId.set(momentId, storagePath);
+    coverPathByMomentId.set(link.moment_id, storagePath);
   }
 
-  return rows.map((moment) => ({
-    id: moment.id,
-    title: moment.title,
-    description: moment.description,
-    category: moment.category,
-    occurredOn: moment.occurred_on,
-    coverImage: coverImageByMomentId.get(moment.id),
-  }));
+  const signedUrls = await getSignedImageUrlMap(
+    Array.from(new Set(coverPathByMomentId.values())),
+  );
+
+  return rows.map((moment) => {
+    const coverPath = coverPathByMomentId.get(moment.id);
+
+    return {
+      id: moment.id,
+      title: moment.title,
+      description: moment.description,
+      category: moment.category,
+      occurredOn: moment.occurred_on,
+      coverImage: coverPath ? signedUrls.get(coverPath) : undefined,
+    };
+  });
 }
 
 export async function createMoment(input: CreateMomentInput): Promise<string> {
-  const userId = await getCurrentUserId();
-
-  if (!userId) {
-    throw new Error('You must be signed in to create a moment.');
+  if (input.photos.length > MAX_IMAGES_PER_UPLOAD) {
+    throw new Error(
+      `You can attach at most ${MAX_IMAGES_PER_UPLOAD} photos to a moment.`,
+    );
   }
 
+  const userId = await requireCurrentUserId(
+    'You must be signed in to create a moment.',
+  );
   if (!input.groupId) {
     throw new Error('A group must be selected before creating a moment.');
   }
@@ -234,9 +226,11 @@ export async function getMomentById(
     throw new Error(linksError.message);
   }
 
-  const photos = (links ?? [])
-    .map((link) => resolveStoragePath(link))
+  const storagePaths = (links ?? [])
+    .map((link) => resolvePhotoStoragePath(link.photos))
     .filter((path): path is string => Boolean(path));
+
+  const signedUrls = await getSignedImageUrlMap(storagePaths);
 
   return {
     id: moment.id,
@@ -244,6 +238,8 @@ export async function getMomentById(
     description: moment.description,
     category: moment.category,
     occurredOn: moment.occurred_on,
-    photos,
+    photos: storagePaths
+      .map((path) => signedUrls.get(path))
+      .filter((url): url is string => Boolean(url)),
   };
 }
