@@ -6,7 +6,7 @@ export const baseColors = {
   text: '#f5f0ec',
   textSoft: '#b8b0a8',
   textMuted: '#6b6560',
-  textError: '#ff2d31',
+  textError: '#ff7a7a',
 };
 
 export const sectionColors = {
