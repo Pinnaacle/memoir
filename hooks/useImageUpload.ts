@@ -59,7 +59,7 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
       setImages((current) =>
         current.map((image) =>
           newImages.some((picked) => picked.id === image.id)
-            ? { ...image, uploadStatus: 'uploading' }
+            ? { ...image, uploadStatus: 'uploading', uploadError: null }
             : image,
         ),
       );
