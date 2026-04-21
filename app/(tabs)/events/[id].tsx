@@ -98,7 +98,7 @@ export default function EventDetailScreen() {
             style={[
               styles.backButton,
               {
-                top: insets.top + space.sm,
+                top: space.lg,
               },
             ]}
           >
