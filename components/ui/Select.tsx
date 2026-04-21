@@ -11,7 +11,17 @@ import {
   StyleSheet,
   View,
   type ViewStyle,
+  useWindowDimensions,
 } from 'react-native';
+import Animated, {
+  Easing,
+  interpolate,
+  runOnJS,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { Text } from './Text';
 
@@ -35,6 +45,73 @@ type SelectProps = {
   disabled?: boolean;
 };
 
+function animateDrawerOpen(drawerProgress: SharedValue<number>) {
+  drawerProgress.value = 0;
+  drawerProgress.value = withTiming(1, {
+    duration: 260,
+    easing: Easing.out(Easing.cubic),
+  });
+}
+
+function animateDrawerClose(
+  drawerProgress: SharedValue<number>,
+  onCloseComplete: () => void,
+) {
+  drawerProgress.value = withTiming(
+    0,
+    {
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+    },
+    (finished) => {
+      if (finished) {
+        runOnJS(onCloseComplete)();
+      }
+    },
+  );
+}
+
+function useDrawerAnimation(
+  windowHeight: number,
+  onCloseComplete: () => void,
+) {
+  const drawerProgress = useSharedValue(0);
+
+  const backdropAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(drawerProgress.value, [0, 1], [0, 1]),
+  }));
+
+  const sheetAnimatedStyle = useAnimatedStyle(
+    () => ({
+      transform: [
+        {
+          translateY: interpolate(
+            drawerProgress.value,
+            [0, 1],
+            [windowHeight, 0],
+          ),
+        },
+      ],
+    }),
+    [windowHeight],
+  );
+
+  function openDrawer() {
+    animateDrawerOpen(drawerProgress);
+  }
+
+  function closeDrawer() {
+    animateDrawerClose(drawerProgress, onCloseComplete);
+  }
+
+  return {
+    backdropAnimatedStyle,
+    sheetAnimatedStyle,
+    openDrawer,
+    closeDrawer,
+  };
+}
+
 export function Select({
   options,
   value,
@@ -49,15 +126,18 @@ export function Select({
   disabled = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { height: windowHeight } = useWindowDimensions();
   const selectedValue = value;
   const selectedOption = useMemo(
     () => options.find((option) => option.value === selectedValue) ?? null,
     [options, selectedValue],
   );
+  const { backdropAnimatedStyle, sheetAnimatedStyle, openDrawer, closeDrawer } =
+    useDrawerAnimation(windowHeight, () => setIsOpen(false));
 
   function handleSelect(nextValue: string) {
     onChange?.(nextValue);
-    setIsOpen(false);
+    closeDrawer();
   }
 
   const triggerTextColor = selectedOption ? baseColors.text : baseColors.textSoft;
@@ -76,7 +156,14 @@ export function Select({
         accessibilityRole="button"
         accessibilityState={{ disabled, expanded: isOpen }}
         disabled={disabled}
-        onPress={() => setIsOpen(true)}
+        onPress={() => {
+          if (isOpen) {
+            return;
+          }
+
+          setIsOpen(true);
+          openDrawer();
+        }}
         style={({ pressed }) => [
           styles.trigger,
           size === 'compact' ? styles.triggerCompact : null,
@@ -113,21 +200,20 @@ export function Select({
       </Pressable>
 
       <Modal
-        animationType="slide"
-        onRequestClose={() => setIsOpen(false)}
+        onRequestClose={closeDrawer}
         transparent
         visible={isOpen}
       >
         <View style={styles.modalRoot}>
-          <View style={styles.overlay}>
+          <Animated.View style={[styles.overlay, backdropAnimatedStyle]}>
             <Pressable
               accessibilityRole="button"
-              onPress={() => setIsOpen(false)}
+              onPress={closeDrawer}
               style={StyleSheet.absoluteFillObject}
             />
-          </View>
+          </Animated.View>
 
-          <View style={styles.sheet}>
+          <Animated.View style={[styles.sheet, sheetAnimatedStyle]}>
             <View style={styles.sheetHandle} />
 
             <View style={styles.sheetHeader}>
@@ -192,7 +278,7 @@ export function Select({
                 );
               })}
             </ScrollView>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </View>
