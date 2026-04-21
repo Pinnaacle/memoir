@@ -208,7 +208,7 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
 
 export async function getEventById(
   eventId: string,
-  groupId?: string | null,
+  groupId: string,
 ): Promise<EventDetail | null> {
   const userId = await getCurrentUserId();
 
@@ -216,16 +216,12 @@ export async function getEventById(
     return null;
   }
 
-  let query = supabase
+  const { data: event, error } = await supabase
     .from('events')
     .select('id, title, occurred_on, location_text, mood, notes')
-    .eq('id', eventId);
-
-  if (groupId) {
-    query = query.eq('group_id', groupId);
-  }
-
-  const { data: event, error } = await query.maybeSingle();
+    .eq('id', eventId)
+    .eq('group_id', groupId)
+    .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
@@ -239,6 +235,7 @@ export async function getEventById(
     .from('event_photos')
     .select('sort_order, photos(storage_path)')
     .eq('event_id', eventId)
+    .eq('group_id', groupId)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
 

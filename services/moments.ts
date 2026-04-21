@@ -200,7 +200,7 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
 
 export async function getMomentById(
   momentId: string,
-  groupId?: string | null,
+  groupId: string,
 ): Promise<MomentDetail | null> {
   const userId = await getCurrentUserId();
 
@@ -208,16 +208,12 @@ export async function getMomentById(
     return null;
   }
 
-  let query = supabase
+  const { data: moment, error: momentError } = await supabase
     .from('moments')
     .select('id, title, description, category, occurred_on')
-    .eq('id', momentId);
-
-  if (groupId) {
-    query = query.eq('group_id', groupId);
-  }
-
-  const { data: moment, error: momentError } = await query.maybeSingle();
+    .eq('id', momentId)
+    .eq('group_id', groupId)
+    .maybeSingle();
 
   if (momentError) {
     throw new Error(momentError.message);
@@ -231,6 +227,7 @@ export async function getMomentById(
     .from('moment_photos')
     .select('sort_order, photos(storage_path)')
     .eq('moment_id', momentId)
+    .eq('group_id', groupId)
     .order('sort_order', { ascending: true });
 
   if (linksError) {

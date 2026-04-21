@@ -30,10 +30,15 @@ export function useEventDetailQuery(
   eventId?: string,
   groupId?: string | null,
 ) {
+  const resolvedGroupId = groupId ?? null;
+
   return useQuery({
-    queryKey: eventKeys.detail(eventId ?? 'missing', groupId ?? null),
+    queryKey: eventKeys.detail(eventId ?? 'missing', resolvedGroupId),
+    enabled: Boolean(eventId && resolvedGroupId),
     queryFn: () =>
-      eventId ? getEventById(eventId, groupId ?? null) : Promise.resolve(null),
+      eventId && resolvedGroupId
+        ? getEventById(eventId, resolvedGroupId)
+        : Promise.resolve(null),
   });
 }
 

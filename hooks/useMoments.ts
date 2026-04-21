@@ -27,11 +27,14 @@ export function useMomentDetailQuery(
   momentId?: string,
   groupId?: string | null,
 ) {
+  const resolvedGroupId = groupId ?? null;
+
   return useQuery({
-    queryKey: momentKeys.detail(momentId ?? 'missing', groupId ?? null),
+    queryKey: momentKeys.detail(momentId ?? 'missing', resolvedGroupId),
+    enabled: Boolean(momentId && resolvedGroupId),
     queryFn: () =>
-      momentId
-        ? getMomentById(momentId, groupId ?? null)
+      momentId && resolvedGroupId
+        ? getMomentById(momentId, resolvedGroupId)
         : Promise.resolve(null),
   });
 }
