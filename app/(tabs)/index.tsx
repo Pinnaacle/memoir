@@ -119,7 +119,7 @@ export default function TimelineScreen() {
           {memories.map((memory) => (
             <View style={{ position: 'relative' }} key={memory.id}>
               <View style={styles.indicator}></View>
-              <Link href={`/moments#${memory.id}`}>
+              <Link href={`/moments#${memory.id}`} asChild>
                 <Card
                   variant="default"
                   title={memory.title}

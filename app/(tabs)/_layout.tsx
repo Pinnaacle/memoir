@@ -93,7 +93,6 @@ export default function TabLayout() {
         name="events"
         options={{
           title: 'Events',
-          headerShown: false,
           tabBarActiveTintColor: sectionColors.events,
           tabBarIcon: ({ color }) => <CalendarDays color={color} size={24} />,
         }}

@@ -1,5 +1,4 @@
 import { Card } from '@/components/ui/Card';
-import Header from '@/components/ui/Header';
 import { Text } from '@/components/ui/Text';
 import { useEventsQuery } from '@/hooks/useEvents';
 import { baseColors, sectionColors } from '@/theme/colors';
@@ -8,10 +7,10 @@ import { text } from '@/theme/type';
 import { type Href, Link } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
   View,
 } from 'react-native';
 
@@ -44,59 +43,55 @@ export default function EventsIndexScreen() {
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Events"
-        color={sectionColors.events}
-        tagLine="Insert very meaningful text here"
-      />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {eventsQuery.isPending ? (
-          <ActivityIndicator
-            color={sectionColors.events}
-            style={styles.loader}
-          />
-        ) : null}
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          {eventsQuery.isPending ? (
+            <ActivityIndicator
+              color={sectionColors.events}
+              style={styles.loader}
+            />
+          ) : null}
 
-        {!eventsQuery.isPending && loadError ? (
-          <Text style={styles.errorText}>{loadError}</Text>
-        ) : null}
+          {!eventsQuery.isPending && loadError ? (
+            <Text style={styles.errorText}>{loadError}</Text>
+          ) : null}
 
-        {!eventsQuery.isPending && !loadError && events.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No events yet. Tap + to create your first one.
-          </Text>
-        ) : null}
+          {!eventsQuery.isPending && !loadError && events.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No events yet. Tap + to create your first one.
+            </Text>
+          ) : null}
 
-        {!eventsQuery.isPending && !loadError
-          ? events.map((event) => (
-              <Link asChild href={`/events/${event.id}` as Href} key={event.id}>
-                <Pressable
-                  accessibilityHint="Opens this event"
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.cardPressable,
-                    pressed ? styles.cardPressed : null,
-                  ]}
+          {!eventsQuery.isPending && !loadError
+            ? events.map((event) => (
+                <Link
+                  asChild
+                  href={`/events/${event.id}` as Href}
+                  key={event.id}
                 >
-                  <Card
-                    color={sectionColors.events}
-                    coverImage={event.coverImage ?? FALLBACK_COVER_IMAGE}
-                    date={formatOccurredOn(event.occurredOn)}
-                    location={event.locationText ?? 'No location added'}
-                    title={event.title}
-                    type={event.mood ?? 'No mood set'}
-                    variant="compressed"
-                  />
-                </Pressable>
-              </Link>
-            ))
-          : null}
+                  <Pressable
+                    accessibilityHint="Opens this event"
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.cardPressable,
+                      pressed ? styles.cardPressed : null,
+                    ]}
+                  >
+                    <Card
+                      color={sectionColors.events}
+                      coverImage={event.coverImage ?? FALLBACK_COVER_IMAGE}
+                      date={formatOccurredOn(event.occurredOn)}
+                      location={event.locationText ?? 'No location added'}
+                      title={event.title}
+                      type={event.mood ?? 'No mood set'}
+                      variant="compressed"
+                    />
+                  </Pressable>
+                </Link>
+              ))
+            : null}
+        </View>
       </ScrollView>
-
       <Link href="/events/new" asChild>
         <Pressable accessibilityRole="button" style={styles.createButton}>
           <Plus color={baseColors.bg} size={28} strokeWidth={2.4} />
@@ -111,12 +106,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: baseColors.bg,
   },
-  scrollView: {
-    flex: 1,
-  },
   content: {
     gap: space.md + space.xs,
     paddingHorizontal: space.lg,
+    paddingTop: space.xl,
     paddingBottom: 110,
   },
   loader: {

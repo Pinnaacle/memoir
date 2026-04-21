@@ -1,3 +1,4 @@
+import { baseColors } from '@/theme/colors';
 import { Stack } from 'expo-router';
 
 export default function MomentsLayout() {
@@ -5,6 +6,7 @@ export default function MomentsLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+        contentStyle: { backgroundColor: baseColors.bg },
       }}
     >
       <Stack.Screen name="index" />

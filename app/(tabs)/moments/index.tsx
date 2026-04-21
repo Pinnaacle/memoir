@@ -11,8 +11,8 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const FALLBACK_COVER_IMAGE = require('@/assets/images/fallbackImage.png');
 
@@ -53,65 +53,62 @@ export default function MomentsScreen() {
         : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
-        showsVerticalScrollIndicator={false}
-      >
-        {momentsQuery.isPending ? (
-          <ActivityIndicator
-            color={sectionColors.moments}
-            style={styles.loader}
-          />
-        ) : null}
+    <View style={styles.container}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          {momentsQuery.isPending ? (
+            <ActivityIndicator
+              color={sectionColors.moments}
+              style={styles.loader}
+            />
+          ) : null}
 
-        {!momentsQuery.isPending && loadError ? (
-          <Text style={styles.errorText}>{loadError}</Text>
-        ) : null}
+          {!momentsQuery.isPending && loadError ? (
+            <Text style={styles.errorText}>{loadError}</Text>
+          ) : null}
 
-        {!momentsQuery.isPending && !loadError && moments.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No moments yet. Tap + to create your first one.
-          </Text>
-        ) : null}
+          {!momentsQuery.isPending && !loadError && moments.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No moments yet. Tap + to create your first one.
+            </Text>
+          ) : null}
 
-        {!momentsQuery.isPending && !loadError
-          ? moments.map((moment) => (
-              <Link
-                asChild
-                href={`/moments/${moment.id}` as Href}
-                key={moment.id}
-              >
-                <Pressable
-                  accessibilityHint="Opens this moment"
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.cardPressable,
-                    pressed ? styles.cardPressed : null,
-                  ]}
+          {!momentsQuery.isPending && !loadError
+            ? moments.map((moment) => (
+                <Link
+                  asChild
+                  href={`/moments/${moment.id}` as Href}
+                  key={moment.id}
                 >
-                  <Card
-                    color={sectionColors.moments}
-                    coverImage={moment.coverImage ?? FALLBACK_COVER_IMAGE}
-                    date={formatOccurredOn(moment.occurredOn)}
-                    description={moment.description ?? ''}
-                    title={moment.title}
-                    type={formatMomentType(moment.category)}
-                    variant="default"
-                  />
-                </Pressable>
-              </Link>
-            ))
-          : null}
+                  <Pressable
+                    accessibilityHint="Opens this moment"
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.cardPressable,
+                      pressed ? styles.cardPressed : null,
+                    ]}
+                  >
+                    <Card
+                      color={sectionColors.moments}
+                      coverImage={moment.coverImage ?? FALLBACK_COVER_IMAGE}
+                      date={formatOccurredOn(moment.occurredOn)}
+                      description={moment.description ?? ''}
+                      title={moment.title}
+                      type={formatMomentType(moment.category)}
+                      variant="default"
+                    />
+                  </Pressable>
+                </Link>
+              ))
+            : null}
+        </View>
       </ScrollView>
-
       <Link href="/moments/new" asChild>
         <Pressable accessibilityRole="button" style={styles.createButton}>
           <Plus color={baseColors.bg} size={28} strokeWidth={2.4} />
         </Pressable>
       </Link>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -123,6 +120,7 @@ const styles = StyleSheet.create({
   content: {
     gap: space.md + space.xs,
     paddingHorizontal: space.lg,
+    paddingTop: space.xl,
     paddingBottom: 110,
   },
   loader: {
