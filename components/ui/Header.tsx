@@ -10,14 +10,26 @@ interface HeaderProps {
   title: string;
   tagLine?: string;
   color?: string;
+  height?: number;
 }
 
-export default function Header({ title, tagLine, color }: HeaderProps) {
+export const TAB_HEADER_CONTENT_HEIGHT = 88;
+
+export default function Header({
+  title,
+  tagLine,
+  color,
+  height,
+}: HeaderProps) {
   return (
-    <SafeAreaView edges={['top']} style={styles.safeArea}>
-      <View style={[styles.headerContainer]}>
-        <View style={[styles.titleContainer]}>
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.safeArea, height ? { height } : null]}
+    >
+      <View style={styles.headerContainer}>
+        <View style={styles.titleContainer}>
           <Text
+            aria-level={1}
             role="heading"
             style={[styles.title, { color: color ?? baseColors.text }]}
           >
@@ -25,7 +37,7 @@ export default function Header({ title, tagLine, color }: HeaderProps) {
           </Text>
           <CircleUser color={baseColors.text} size={24} />
         </View>
-        {tagLine && <Text style={[styles.tagLine]}>{tagLine}</Text>}
+        {tagLine && <Text style={styles.tagLine}>{tagLine}</Text>}
       </View>
     </SafeAreaView>
   );
@@ -34,7 +46,7 @@ export default function Header({ title, tagLine, color }: HeaderProps) {
 const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: baseColors.bg,
-    top: 16,
+    paddingTop: space.lg,
   },
   headerContainer: {
     marginBottom: space.lg,

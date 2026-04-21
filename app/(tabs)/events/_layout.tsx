@@ -5,26 +5,18 @@ export default function EventsLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: baseColors.bg },
-        headerShadowVisible: false,
-        headerTintColor: baseColors.text,
+        headerShown: false,
         contentStyle: { backgroundColor: baseColors.bg },
       }}
     >
-      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="index" />
       <Stack.Screen
         name="new"
         options={{
           presentation: 'modal',
-          headerShown: false,
         }}
       />
-      <Stack.Screen
-        name="[id]"
-        options={{
-          headerShown: false,
-        }}
-      />
+      <Stack.Screen name="[id]" />
     </Stack>
   );
 }

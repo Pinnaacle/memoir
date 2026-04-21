@@ -1,4 +1,5 @@
 import { Card } from '@/components/ui/Card';
+import Header from '@/components/ui/Header';
 import { Text } from '@/components/ui/Text';
 import { listEventsForCurrentUser, eventKeys } from '@/lib/events';
 import { baseColors, sectionColors } from '@/theme/colors';
@@ -12,8 +13,8 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const FALLBACK_COVER_IMAGE = require('@/assets/images/fallbackImage.png');
 
@@ -46,10 +47,15 @@ export default function EventsIndexScreen() {
         : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
+      <Header
+        title="Events"
+        color={sectionColors.events}
+        tagLine="Insert very meaningful text here"
+      />
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
         {eventsQuery.isPending ? (
@@ -100,7 +106,7 @@ export default function EventsIndexScreen() {
           <Plus color={baseColors.bg} size={28} strokeWidth={2.4} />
         </Pressable>
       </Link>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -108,6 +114,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: baseColors.bg,
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     gap: space.md + space.xs,

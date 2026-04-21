@@ -1,7 +1,8 @@
-import Header from '@/components/ui/Header';
+import Header, { TAB_HEADER_CONTENT_HEIGHT } from '@/components/ui/Header';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Tabs } from 'expo-router';
 import { CalendarDays, Heart, House, Image, Star } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { baseColors, sectionColors } from '../../theme/colors';
 import { text } from '../../theme/type';
 
@@ -30,14 +31,22 @@ const headerTagLineByRoute: Record<string, string | undefined> = {
 };
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const headerHeight = insets.top + TAB_HEADER_CONTENT_HEIGHT;
+
   return (
     <Tabs
       screenOptions={({ route }) => ({
         sceneStyle: { backgroundColor: baseColors.bg },
+        headerStyle: {
+          backgroundColor: baseColors.bg,
+          height: headerHeight,
+        },
         header: () => (
           <Header
             title={headerTitleByRoute[route.name] ?? route.name}
             color={headerColorByRoute[route.name] ?? baseColors.text}
+            height={headerHeight}
             tagLine={headerTagLineByRoute[route.name]}
           />
         ),
@@ -82,16 +91,11 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="events"
-        options={({ route }) => {
-          const focusedRouteName =
-            getFocusedRouteNameFromRoute(route) ?? 'index';
-
-          return {
-            title: 'Events',
-            headerShown: focusedRouteName !== '[id]',
-            tabBarActiveTintColor: sectionColors.events,
-            tabBarIcon: ({ color }) => <CalendarDays color={color} size={24} />,
-          };
+        options={{
+          title: 'Events',
+          headerShown: false,
+          tabBarActiveTintColor: sectionColors.events,
+          tabBarIcon: ({ color }) => <CalendarDays color={color} size={24} />,
         }}
       />
       <Tabs.Screen
