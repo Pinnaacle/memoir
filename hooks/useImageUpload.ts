@@ -31,7 +31,7 @@ export const imageUploadKeys = {
 export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
   const queryClient = useQueryClient();
 
-  const uploadMutation = useMutation<UploadedImage, Error, UploadVariables>({
+  const { mutateAsync } = useMutation<UploadedImage, Error, UploadVariables>({
     mutationFn: ({ image, context }) =>
       uploadEntityImage({
         image,
@@ -88,7 +88,7 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
       await Promise.all(
         newImages.map(async (image) => {
           try {
-            const uploaded = await uploadMutation.mutateAsync({
+            const uploaded = await mutateAsync({
               image,
               context,
             });
@@ -124,7 +124,7 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
         }),
       );
     },
-    [ensureContext, queryClient, setImages, uploadMutation],
+    [ensureContext, mutateAsync, queryClient, setImages],
   );
 
   return { startUpload };
