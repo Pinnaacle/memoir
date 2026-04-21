@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     boxShadow: `0px 0px 8px 0px ${sectionColors.timeline}`,
     position: 'absolute',
     top: 20,
-    left: -space.md,
+    left: -space.lg,
     transform: [{ translateX: -6 }],
   },
 
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     backgroundColor: baseColors.bg,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: space.md,
+    gap: space.lg,
   },
 
   memoriesContainer: {
