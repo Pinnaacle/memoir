@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     left: space.lg - 6,
     position: 'absolute',
-    top: 58,
+    top: space.lg,
     width: 40,
   },
   typePill: {
