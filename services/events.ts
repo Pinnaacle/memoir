@@ -1,4 +1,15 @@
+import {
+  getSignedImageUrlMap,
+  MAX_IMAGES_PER_UPLOAD,
+} from '@/lib/images';
 import { supabase } from '@/lib/supabase';
+import {
+  getCurrentUserId,
+  getPersonalGroupIdForUser,
+  type JoinedPhoto,
+  requireCurrentUserId,
+  resolvePhotoStoragePath,
+} from '@/services/userContext';
 
 export type EventPhotoInput = {
   storagePath?: string | null;
@@ -32,63 +43,14 @@ export type EventDetail = {
   photos: string[];
 };
 
-type LinkedPhotoRow = {
+type EventPhotoLink = {
   event_id?: string | null;
-  photos?:
-    | { storage_path?: string | null }
-    | { storage_path?: string | null }[]
-    | null;
+  photos?: JoinedPhoto;
 };
 
 function normalizeOptionalText(value: string): string | null {
   const trimmed = value.trim();
-
   return trimmed.length > 0 ? trimmed : null;
-}
-
-function resolveStoragePath(link: LinkedPhotoRow): string | null {
-  const relatedPhoto = Array.isArray(link.photos)
-    ? link.photos[0]
-    : link.photos;
-
-  return relatedPhoto?.storage_path ?? null;
-}
-
-async function getCurrentUserId(): Promise<string | null> {
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return user?.id ?? null;
-}
-
-async function getPersonalGroupIdForUser(userId: string): Promise<string> {
-  const { data: groups, error } = await supabase
-    .from('groups')
-    .select('id, name, group_kind')
-    .eq('personal_owner_user_id', userId);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const personalGroup =
-    groups?.find((group) => group.group_kind === 'personal') ??
-    groups?.find((group) => group.name?.toLowerCase() === 'personal') ??
-    groups?.[0];
-
-  if (!personalGroup?.id) {
-    throw new Error(
-      'No group found for this user yet. The personal group needs to exist before creating events.',
-    );
-  }
-
-  return personalGroup.id;
 }
 
 export async function listEventsForCurrentUser(): Promise<EventListItem[]> {
@@ -121,44 +83,53 @@ export async function listEventsForCurrentUser(): Promise<EventListItem[]> {
     .select('event_id, sort_order, photos(storage_path)')
     .in('event_id', eventIds)
     .order('event_id', { ascending: true })
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true });
+    .order('sort_order', { ascending: true });
 
   if (linksError) {
     throw new Error(linksError.message);
   }
 
-  const coverImageByEventId = new Map<string, string>();
+  const coverPathByEventId = new Map<string, string>();
 
-  for (const link of (links ?? []) as LinkedPhotoRow[]) {
-    const eventId = link.event_id;
-    const storagePath = resolveStoragePath(link);
+  for (const link of (links ?? []) as EventPhotoLink[]) {
+    const storagePath = resolvePhotoStoragePath(link.photos);
 
-    if (!eventId || !storagePath || coverImageByEventId.has(eventId)) {
-      continue;
-    }
+    if (!link.event_id || !storagePath) continue;
+    if (coverPathByEventId.has(link.event_id)) continue;
 
-    coverImageByEventId.set(eventId, storagePath);
+    coverPathByEventId.set(link.event_id, storagePath);
   }
 
-  return rows.map((event) => ({
-    id: event.id,
-    title: event.title,
-    occurredOn: event.occurred_on,
-    locationText: event.location_text,
-    mood: event.mood,
-    coverImage: coverImageByEventId.get(event.id),
-  }));
+  const signedUrls = await getSignedImageUrlMap(
+    Array.from(new Set(coverPathByEventId.values())),
+  );
+
+  return rows.map((event) => {
+    const coverPath = coverPathByEventId.get(event.id);
+
+    return {
+      id: event.id,
+      title: event.title,
+      occurredOn: event.occurred_on,
+      locationText: event.location_text,
+      mood: event.mood,
+      coverImage: coverPath ? signedUrls.get(coverPath) : undefined,
+    };
+  });
 }
 
 export async function createEvent(input: CreateEventInput): Promise<string> {
-  const userId = await getCurrentUserId();
-
-  if (!userId) {
-    throw new Error('You must be signed in to create an event.');
+  if (input.photos.length > MAX_IMAGES_PER_UPLOAD) {
+    throw new Error(
+      `You can attach at most ${MAX_IMAGES_PER_UPLOAD} photos to an event.`,
+    );
   }
 
+  const userId = await requireCurrentUserId(
+    'You must be signed in to create an event.',
+  );
   const groupId = await getPersonalGroupIdForUser(userId);
+
   const { data: insertedEvent, error: eventError } = await supabase
     .from('events')
     .insert({
@@ -254,16 +225,17 @@ export async function getEventById(
     .from('event_photos')
     .select('sort_order, photos(storage_path)')
     .eq('event_id', eventId)
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true });
+    .order('sort_order', { ascending: true });
 
   if (linksError) {
     throw new Error(linksError.message);
   }
 
-  const photos = (links ?? [])
-    .map((link) => resolveStoragePath(link))
+  const storagePaths = (links ?? [])
+    .map((link) => resolvePhotoStoragePath(link.photos))
     .filter((path): path is string => Boolean(path));
+
+  const signedUrls = await getSignedImageUrlMap(storagePaths);
 
   return {
     id: event.id,
@@ -272,6 +244,8 @@ export async function getEventById(
     locationText: event.location_text,
     mood: event.mood,
     notes: event.notes,
-    photos,
+    photos: storagePaths
+      .map((path) => signedUrls.get(path))
+      .filter((url): url is string => Boolean(url)),
   };
 }
