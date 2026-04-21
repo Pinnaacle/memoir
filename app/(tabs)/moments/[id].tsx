@@ -56,8 +56,9 @@ export default function MomentDetailScreen() {
   const moment = momentQuery.data;
   const displayDate = moment ? formatOccurredOn(moment.occurredOn) : '';
   const displayType = formatMomentType(moment?.category ?? null);
-  const bannerImages =
-    moment?.photos?.length ? moment.photos : [FALLBACK_COVER_IMAGE];
+  const bannerImages = moment?.photos?.length
+    ? moment.photos
+    : [FALLBACK_COVER_IMAGE];
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const photoThumbs = moment?.photos?.slice(0, 3) ?? [];
   const loadError =
