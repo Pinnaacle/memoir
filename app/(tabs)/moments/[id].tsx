@@ -21,6 +21,9 @@ import {
   View,
 } from 'react-native';
 
+const ITEM_WIDTH = 110;
+const COLUMNS = 3;
+
 const FALLBACK_COVER_IMAGE = require('../../../assets/images/fallbackImage.png');
 
 function formatOccurredOn(dateValue: string): string {
@@ -101,6 +104,9 @@ export default function MomentDetailScreen() {
       </View>
     );
   }
+  const horizontalPadding = 16 * 2; // same as your container paddingHorizontal
+  const availableWidth = width - horizontalPadding;
+  const gap = (availableWidth - ITEM_WIDTH * COLUMNS) / COLUMNS;
 
   return (
     <View style={styles.screen}>
@@ -188,8 +194,8 @@ export default function MomentDetailScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Photos</Text>
-            <View style={styles.photosRow}>
-              {Array.from({ length: 3 }).map((_, index) => {
+            <View style={[styles.photosRow, { gap: gap }]}>
+              {Array.from({ length: 6 }).map((_, index) => {
                 const photo = photoThumbs[index];
 
                 if (!photo) {
@@ -204,7 +210,21 @@ export default function MomentDetailScreen() {
                 }
 
                 return (
-                  <View key={photo} style={styles.photoThumbWrap}>
+                  <View
+                    key={photo}
+                    style={[
+                      {
+                        display: 'flex',
+                        flex: 3,
+                        gap: gap,
+                        marginHorizontal: 'auto',
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        width: '100%',
+                      },
+                    ]}
+                  >
                     <Image contentFit="cover" source={{ uri: photo }} />
                   </View>
                 );
@@ -341,13 +361,19 @@ const styles = StyleSheet.create({
   },
   photosRow: {
     flexDirection: 'row',
-    gap: space.sm,
+    flex: 3,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   photoThumbWrap: {
     borderRadius: 14,
     height: 111,
     overflow: 'hidden',
     width: 111,
+  },
+  photoThumb: {
+    width: '100%',
+    height: '100%',
   },
 
   photoPlaceholder: {
