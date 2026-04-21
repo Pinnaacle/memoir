@@ -1,34 +1,38 @@
 import {
   createMoment,
   getMomentById,
-  listMomentsForCurrentUser,
+  listMomentsForGroup,
 } from '@/services/moments';
-import {
-  skipToken,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export const momentKeys = {
   all: ['moments'] as const,
   lists: () => [...momentKeys.all, 'list'] as const,
-  list: () => [...momentKeys.lists(), 'current-user'] as const,
+  list: (groupId: string | null) =>
+    [...momentKeys.lists(), groupId ?? 'no-group'] as const,
   details: () => [...momentKeys.all, 'detail'] as const,
-  detail: (momentId: string) => [...momentKeys.details(), momentId] as const,
+  detail: (momentId: string, groupId: string | null) =>
+    [...momentKeys.details(), momentId, groupId ?? 'no-group'] as const,
 };
 
-export function useMomentsQuery() {
+export function useMomentsQuery(groupId?: string | null) {
   return useQuery({
-    queryKey: momentKeys.list(),
-    queryFn: listMomentsForCurrentUser,
+    queryKey: momentKeys.list(groupId ?? null),
+    queryFn: () =>
+      groupId ? listMomentsForGroup(groupId) : Promise.resolve([]),
   });
 }
 
-export function useMomentDetailQuery(momentId?: string) {
+export function useMomentDetailQuery(
+  momentId?: string,
+  groupId?: string | null,
+) {
   return useQuery({
-    queryKey: momentKeys.detail(momentId ?? 'missing'),
-    queryFn: momentId ? () => getMomentById(momentId) : skipToken,
+    queryKey: momentKeys.detail(momentId ?? 'missing', groupId ?? null),
+    queryFn: () =>
+      momentId
+        ? getMomentById(momentId, groupId ?? null)
+        : Promise.resolve(null),
   });
 }
 

@@ -5,6 +5,7 @@ export type EventPhotoInput = {
 };
 
 export type CreateEventInput = {
+  groupId: string;
   title: string;
   occurredAt: Date;
   location: string;
@@ -67,41 +68,17 @@ async function getCurrentUserId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
-async function getPersonalGroupIdForUser(userId: string): Promise<string> {
-  const { data: groups, error } = await supabase
-    .from('groups')
-    .select('id, name, group_kind')
-    .eq('personal_owner_user_id', userId);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const personalGroup =
-    groups?.find((group) => group.group_kind === 'personal') ??
-    groups?.find((group) => group.name?.toLowerCase() === 'personal') ??
-    groups?.[0];
-
-  if (!personalGroup?.id) {
-    throw new Error(
-      'No group found for this user yet. The personal group needs to exist before creating events.',
-    );
-  }
-
-  return personalGroup.id;
-}
-
-export async function listEventsForCurrentUser(): Promise<EventListItem[]> {
+export async function listEventsForGroup(groupId: string): Promise<EventListItem[]> {
   const userId = await getCurrentUserId();
 
-  if (!userId) {
+  if (!userId || !groupId) {
     return [];
   }
 
   const { data: events, error } = await supabase
     .from('events')
     .select('id, title, occurred_on, location_text, mood, created_at')
-    .eq('created_by', userId)
+    .eq('group_id', groupId)
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -158,11 +135,14 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
     throw new Error('You must be signed in to create an event.');
   }
 
-  const groupId = await getPersonalGroupIdForUser(userId);
+  if (!input.groupId) {
+    throw new Error('A group must be selected before creating an event.');
+  }
+
   const { data: insertedEvent, error: eventError } = await supabase
     .from('events')
     .insert({
-      group_id: groupId,
+      group_id: input.groupId,
       created_by: userId,
       title: input.title.trim(),
       occurred_on: input.occurredAt.toISOString().slice(0, 10),
@@ -193,7 +173,7 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
     .from('photos')
     .insert(
       persistedPhotoCandidates.map((photo) => ({
-        group_id: groupId,
+        group_id: input.groupId,
         uploaded_by: userId,
         storage_path: photo.storagePath!,
         caption: null,
@@ -212,7 +192,7 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
 
   const { error: linksError } = await supabase.from('event_photos').insert(
     insertedPhotos.map((photo, index) => ({
-      group_id: groupId,
+      group_id: input.groupId,
       event_id: insertedEvent.id,
       photo_id: photo.id,
       sort_order: index,
@@ -228,6 +208,7 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
 
 export async function getEventById(
   eventId: string,
+  groupId?: string | null,
 ): Promise<EventDetail | null> {
   const userId = await getCurrentUserId();
 
@@ -235,12 +216,16 @@ export async function getEventById(
     return null;
   }
 
-  const { data: event, error } = await supabase
+  let query = supabase
     .from('events')
     .select('id, title, occurred_on, location_text, mood, notes')
-    .eq('id', eventId)
-    .eq('created_by', userId)
-    .maybeSingle();
+    .eq('id', eventId);
+
+  if (groupId) {
+    query = query.eq('group_id', groupId);
+  }
+
+  const { data: event, error } = await query.maybeSingle();
 
   if (error) {
     throw new Error(error.message);

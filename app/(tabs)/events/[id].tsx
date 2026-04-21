@@ -1,5 +1,6 @@
 import Divider from '@/components/ui/Divider';
 import { Text } from '@/components/ui/Text';
+import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useEventDetailQuery } from '@/hooks/useEvents';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
@@ -35,10 +36,11 @@ function formatOccurredOn(dateValue: string): string {
 
 export default function EventDetailScreen() {
   const insets = useSafeAreaInsets();
+  const { activeGroup, isLoading: isLoadingGroups } = useActiveGroup();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
   const eventId = Array.isArray(rawId) ? rawId[0] : rawId;
-  const eventQuery = useEventDetailQuery(eventId);
+  const eventQuery = useEventDetailQuery(eventId, activeGroup?.id);
   const displayDate = eventQuery.data?.occurredOn
     ? formatOccurredOn(eventQuery.data.occurredOn)
     : '';
@@ -54,7 +56,7 @@ export default function EventDetailScreen() {
         : null;
   const hasNotes = Boolean(eventQuery.data?.notes?.trim());
 
-  if (eventQuery.isPending) {
+  if (isLoadingGroups || eventQuery.isPending) {
     return (
       <View style={styles.screenCentered}>
         <ActivityIndicator color={sectionColors.events} />

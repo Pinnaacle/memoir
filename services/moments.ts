@@ -5,6 +5,7 @@ export type MomentPhotoInput = {
 };
 
 export type CreateMomentInput = {
+  groupId: string;
   momentType: string;
   title: string;
   description: string;
@@ -59,41 +60,19 @@ async function getCurrentUserId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
-async function getPersonalGroupIdForUser(userId: string): Promise<string> {
-  const { data: groups, error } = await supabase
-    .from('groups')
-    .select('id, name, group_kind')
-    .eq('personal_owner_user_id', userId);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const personalGroup =
-    groups?.find((group) => group.group_kind === 'personal') ??
-    groups?.find((group) => group.name?.toLowerCase() === 'personal') ??
-    groups?.[0];
-
-  if (!personalGroup?.id) {
-    throw new Error(
-      'No group found for this user yet. The personal group needs to exist before creating moments.',
-    );
-  }
-
-  return personalGroup.id;
-}
-
-export async function listMomentsForCurrentUser(): Promise<MomentListItem[]> {
+export async function listMomentsForGroup(
+  groupId: string,
+): Promise<MomentListItem[]> {
   const userId = await getCurrentUserId();
 
-  if (!userId) {
+  if (!userId || !groupId) {
     return [];
   }
 
   const { data: moments, error } = await supabase
     .from('moments')
     .select('id, title, description, category, occurred_on, created_at')
-    .eq('created_by', userId)
+    .eq('group_id', groupId)
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -149,11 +128,14 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
     throw new Error('You must be signed in to create a moment.');
   }
 
-  const groupId = await getPersonalGroupIdForUser(userId);
+  if (!input.groupId) {
+    throw new Error('A group must be selected before creating a moment.');
+  }
+
   const { data: insertedMoment, error: momentError } = await supabase
     .from('moments')
     .insert({
-      group_id: groupId,
+      group_id: input.groupId,
       created_by: userId,
       category: input.momentType,
       title: input.title.trim(),
@@ -183,7 +165,7 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
     .from('photos')
     .insert(
       persistedPhotoCandidates.map((photo) => ({
-        group_id: groupId,
+        group_id: input.groupId,
         uploaded_by: userId,
         storage_path: photo.storagePath!,
         caption: null,
@@ -202,7 +184,7 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
 
   const { error: linksError } = await supabase.from('moment_photos').insert(
     insertedPhotos.map((photo, index) => ({
-      group_id: groupId,
+      group_id: input.groupId,
       moment_id: insertedMoment.id,
       photo_id: photo.id,
       sort_order: index,
@@ -218,6 +200,7 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
 
 export async function getMomentById(
   momentId: string,
+  groupId?: string | null,
 ): Promise<MomentDetail | null> {
   const userId = await getCurrentUserId();
 
@@ -225,12 +208,16 @@ export async function getMomentById(
     return null;
   }
 
-  const { data: moment, error: momentError } = await supabase
+  let query = supabase
     .from('moments')
     .select('id, title, description, category, occurred_on')
-    .eq('id', momentId)
-    .eq('created_by', userId)
-    .maybeSingle();
+    .eq('id', momentId);
+
+  if (groupId) {
+    query = query.eq('group_id', groupId);
+  }
+
+  const { data: moment, error: momentError } = await query.maybeSingle();
 
   if (momentError) {
     throw new Error(momentError.message);
