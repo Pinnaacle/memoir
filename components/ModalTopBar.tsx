@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
   },
   topBarContainer: {
     marginHorizontal: space.lg,
+    marginTop: space.xs,
     display: 'flex',
     justifyContent: 'space-between',
     flexDirection: 'row',
@@ -68,7 +69,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: baseColors.text,
-    fontSize: textTheme.size.lg,
+    fontSize: textTheme.size.xl,
     fontFamily: textTheme.family.medium,
     alignSelf: 'center',
   },

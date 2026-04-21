@@ -53,12 +53,12 @@ const styles = StyleSheet.create({
   },
   label: {
     color: baseColors.textSoft,
-    fontSize: textTheme.size.sm,
+    fontSize: textTheme.size.md,
     fontFamily: textTheme.family.semiBold,
   },
   selectedLabel: {
     color: baseColors.bg,
-    fontSize: textTheme.size.sm,
+    fontSize: textTheme.size.md,
     fontFamily: textTheme.family.semiBold,
   },
 });

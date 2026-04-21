@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: baseColors.text,
-    fontSize: textTheme.size.xl,
+    fontSize: textTheme.size.xxl,
     fontFamily: textTheme.family.bold,
   },
   actions: {
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   },
   tagLine: {
     color: baseColors.textSoft,
-    fontSize: textTheme.size.sm,
+    fontSize: textTheme.size.md,
     fontFamily: textTheme.family.regularItalic,
   },
 });

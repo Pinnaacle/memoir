@@ -39,8 +39,8 @@ const variantStyles: Record<TextVariant, TextStyle> = {
   default: {},
   h1: {
     fontFamily: textTheme.family.bold,
-    fontSize: textTheme.size.xl,
-    lineHeight: textTheme.lineHeight.xl,
+    fontSize: textTheme.size.xxl,
+    lineHeight: textTheme.lineHeight.xxl,
     textAlign: 'center',
     letterSpacing: -1,
   },

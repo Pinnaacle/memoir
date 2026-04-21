@@ -153,8 +153,8 @@ export function Dropdown({
         ]}
       >
         <Text style={styles.triggerText}>{selectedLabel}</Text>
-        <Animated.View style={[styles.chevronSlot, chevronAnimatedStyle]}>
-          <ChevronDown color={baseColors.bg} size={20} strokeWidth={2.25} />
+        <Animated.View style={[chevronAnimatedStyle]}>
+          <ChevronDown color={baseColors.bg} size={24} strokeWidth={2.25} />
         </Animated.View>
       </Pressable>
     </View>
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     borderRadius: radius.full,
     flexDirection: 'row',
-    height: 36,
+    paddingVertical: space.sm,
     justifyContent: 'space-between',
     paddingHorizontal: space.lg,
     position: 'relative',
@@ -184,8 +184,8 @@ const styles = StyleSheet.create({
   triggerText: {
     color: baseColors.bg,
     fontFamily: textTheme.family.semiBold,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
+    fontSize: textTheme.size.lg,
+    lineHeight: textTheme.lineHeight.lg,
   },
   panel: {
     backgroundColor: baseColors.card,
@@ -194,11 +194,12 @@ const styles = StyleSheet.create({
     left: 0,
     paddingBottom: 12,
     paddingHorizontal: space.lg,
-    paddingTop: 42,
+    paddingTop: 50,
     position: 'absolute',
     right: 0,
     top: 0,
     zIndex: 1,
+    gap: space.xs,
   },
   optionRow: {
     borderCurve: 'continuous',
@@ -211,14 +212,7 @@ const styles = StyleSheet.create({
   optionText: {
     color: baseColors.text,
     fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.xs,
-    lineHeight: textTheme.lineHeight.xs,
-  },
-  chevronSlot: {
-    alignItems: 'center',
-    flexShrink: 0,
-    height: 24,
-    justifyContent: 'center',
-    width: 24,
+    fontSize: textTheme.size.md,
+    lineHeight: textTheme.lineHeight.md,
   },
 });

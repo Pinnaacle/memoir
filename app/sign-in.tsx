@@ -177,8 +177,8 @@ const styles = StyleSheet.create({
   subtitle: {
     color: baseColors.textSoft,
     fontFamily: textTheme.family.regular,
-    fontSize: textTheme.size.md,
-    lineHeight: textTheme.lineHeight.md,
+    fontSize: textTheme.size.lg,
+    lineHeight: textTheme.lineHeight.lg,
   },
   form: {
     gap: space.lg,
@@ -189,8 +189,8 @@ const styles = StyleSheet.create({
   label: {
     color: baseColors.text,
     fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.md,
-    lineHeight: textTheme.lineHeight.md,
+    fontSize: textTheme.size.lg,
+    lineHeight: textTheme.lineHeight.lg,
   },
   input: {
     backgroundColor: baseColors.card,
@@ -199,16 +199,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     color: baseColors.text,
     fontFamily: textTheme.family.regular,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
+    fontSize: textTheme.size.md,
+    lineHeight: textTheme.lineHeight.md,
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
   },
   errorText: {
     color: baseColors.textError,
     fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
+    fontSize: textTheme.size.md,
+    lineHeight: textTheme.lineHeight.md,
   },
   footer: {
     alignItems: 'center',
@@ -217,13 +217,13 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: baseColors.textSoft,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
+    fontSize: textTheme.size.md,
+    lineHeight: textTheme.lineHeight.md,
   },
   footerLink: {
     color: sectionColors.timeline,
     fontFamily: textTheme.family.semiBold,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
+    fontSize: textTheme.size.md,
+    lineHeight: textTheme.lineHeight.md,
   },
 });
