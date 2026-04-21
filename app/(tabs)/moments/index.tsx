@@ -12,8 +12,8 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const FALLBACK_COVER_IMAGE = require('@/assets/images/fallbackImage.png');
 
@@ -64,69 +64,66 @@ export default function MomentsScreen() {
       : (activeGroup?.name ?? 'this space');
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
-        showsVerticalScrollIndicator={false}
-      >
-        {isLoadingGroups || momentsQuery.isPending ? (
-          <ActivityIndicator
-            color={sectionColors.moments}
-            style={styles.loader}
-          />
-        ) : null}
+    <View style={styles.container}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          {isLoadingGroups || momentsQuery.isPending ? (
+            <ActivityIndicator
+              color={sectionColors.moments}
+              style={styles.loader}
+            />
+          ) : null}
 
-        {!isLoadingGroups && !momentsQuery.isPending && loadError ? (
-          <Text style={styles.errorText}>{loadError}</Text>
-        ) : null}
+          {!isLoadingGroups && !momentsQuery.isPending && loadError ? (
+            <Text style={styles.errorText}>{loadError}</Text>
+          ) : null}
 
-        {!isLoadingGroups &&
-        !momentsQuery.isPending &&
-        !loadError &&
-        moments.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No moments in {activeGroupLabel} yet. Tap + to create your first
-            one.
-          </Text>
-        ) : null}
+          {!isLoadingGroups &&
+          !momentsQuery.isPending &&
+          !loadError &&
+          moments.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No moments in {activeGroupLabel} yet. Tap + to create your first
+              one.
+            </Text>
+          ) : null}
 
-        {!isLoadingGroups && !momentsQuery.isPending && !loadError
-          ? moments.map((moment) => (
-              <Link
-                asChild
-                href={`/moments/${moment.id}` as Href}
-                key={moment.id}
-              >
-                <Pressable
-                  accessibilityHint="Opens this moment"
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.cardPressable,
-                    pressed ? styles.cardPressed : null,
-                  ]}
+          {!isLoadingGroups && !momentsQuery.isPending && !loadError
+            ? moments.map((moment) => (
+                <Link
+                  asChild
+                  href={`/moments/${moment.id}` as Href}
+                  key={moment.id}
                 >
-                  <Card
-                    color={sectionColors.moments}
-                    coverImage={moment.coverImage ?? FALLBACK_COVER_IMAGE}
-                    date={formatOccurredOn(moment.occurredOn)}
-                    description={moment.description ?? ''}
-                    title={moment.title}
-                    type={formatMomentType(moment.category)}
-                    variant="default"
-                  />
-                </Pressable>
-              </Link>
-            ))
-          : null}
+                  <Pressable
+                    accessibilityHint="Opens this moment"
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.cardPressable,
+                      pressed ? styles.cardPressed : null,
+                    ]}
+                  >
+                    <Card
+                      color={sectionColors.moments}
+                      coverImage={moment.coverImage ?? FALLBACK_COVER_IMAGE}
+                      date={formatOccurredOn(moment.occurredOn)}
+                      description={moment.description ?? ''}
+                      title={moment.title}
+                      type={formatMomentType(moment.category)}
+                      variant="default"
+                    />
+                  </Pressable>
+                </Link>
+              ))
+            : null}
+        </View>
       </ScrollView>
-
       <Link href="/moments/new" asChild>
         <Pressable accessibilityRole="button" style={styles.createButton}>
           <Plus color={baseColors.bg} size={28} strokeWidth={2.4} />
         </Pressable>
       </Link>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -168,7 +165,6 @@ const styles = StyleSheet.create({
   createButton: {
     alignItems: 'center',
     backgroundColor: sectionColors.moments,
-    boxShadow: '0px 8px 18px rgba(0, 0, 0, 0.18)',
     borderRadius: 999,
     bottom: 20,
     height: 60,
@@ -176,5 +172,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute',
     right: space.xl,
+    shadowColor: baseColors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    elevation: 4,
   },
 });

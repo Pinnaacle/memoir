@@ -16,7 +16,10 @@ export default function EventsLayout() {
           presentation: 'modal',
         }}
       />
-      <Stack.Screen name="[id]" />
+      <Stack.Screen
+        name="[id]"
+        options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+      />
     </Stack>
   );
 }

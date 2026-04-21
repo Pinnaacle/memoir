@@ -251,12 +251,11 @@ const styles = StyleSheet.create({
     color: baseColors.text,
     fontFamily: textTheme.family.regular,
     fontSize: textTheme.size.md,
-    lineHeight: textTheme.lineHeight.md,
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
   },
   errorText: {
-    color: '#ff7a7a',
+    color: baseColors.textError,
     fontFamily: textTheme.family.medium,
     fontSize: textTheme.size.md,
     lineHeight: textTheme.lineHeight.md,

@@ -54,57 +54,59 @@ export default function EventsIndexScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {isLoadingGroups || eventsQuery.isPending ? (
-          <ActivityIndicator
-            color={sectionColors.events}
-            style={styles.loader}
-          />
-        ) : null}
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          {isLoadingGroups || eventsQuery.isPending ? (
+            <ActivityIndicator
+              color={sectionColors.events}
+              style={styles.loader}
+            />
+          ) : null}
 
-        {!isLoadingGroups && !eventsQuery.isPending && loadError ? (
-          <Text style={styles.errorText}>{loadError}</Text>
-        ) : null}
+          {!isLoadingGroups && !eventsQuery.isPending && loadError ? (
+            <Text style={styles.errorText}>{loadError}</Text>
+          ) : null}
 
-        {!isLoadingGroups &&
-        !eventsQuery.isPending &&
-        !loadError &&
-        events.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No events in {activeGroupLabel} yet. Tap + to create your first one.
-          </Text>
-        ) : null}
+          {!isLoadingGroups &&
+          !eventsQuery.isPending &&
+          !loadError &&
+          events.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No events in {activeGroupLabel} yet. Tap + to create your first
+              one.
+            </Text>
+          ) : null}
 
-        {!isLoadingGroups && !eventsQuery.isPending && !loadError
-          ? events.map((event) => (
-              <Link asChild href={`/events/${event.id}` as Href} key={event.id}>
-                <Pressable
-                  accessibilityHint="Opens this event"
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.cardPressable,
-                    pressed ? styles.cardPressed : null,
-                  ]}
+          {!isLoadingGroups && !eventsQuery.isPending && !loadError
+            ? events.map((event) => (
+                <Link
+                  asChild
+                  href={`/events/${event.id}` as Href}
+                  key={event.id}
                 >
-                  <Card
-                    color={sectionColors.events}
-                    coverImage={event.coverImage ?? FALLBACK_COVER_IMAGE}
-                    date={formatOccurredOn(event.occurredOn)}
-                    location={event.locationText ?? 'No location added'}
-                    title={event.title}
-                    type={event.mood ?? 'No mood set'}
-                    variant="compressed"
-                  />
-                </Pressable>
-              </Link>
-            ))
-          : null}
+                  <Pressable
+                    accessibilityHint="Opens this event"
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.cardPressable,
+                      pressed ? styles.cardPressed : null,
+                    ]}
+                  >
+                    <Card
+                      color={sectionColors.events}
+                      coverImage={event.coverImage ?? FALLBACK_COVER_IMAGE}
+                      date={formatOccurredOn(event.occurredOn)}
+                      location={event.locationText ?? 'No location added'}
+                      title={event.title}
+                      type={event.mood ?? 'No mood set'}
+                      variant="compressed"
+                    />
+                  </Pressable>
+                </Link>
+              ))
+            : null}
+        </View>
       </ScrollView>
-
       <Link href="/events/new" asChild>
         <Pressable accessibilityRole="button" style={styles.createButton}>
           <Plus color={baseColors.bg} size={28} strokeWidth={2.4} />
@@ -119,12 +121,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: baseColors.bg,
   },
-  scrollView: {
-    flex: 1,
-  },
   content: {
     gap: space.md + space.xs,
     paddingHorizontal: space.lg,
+    // paddingTop: space.xl,
     paddingBottom: 110,
   },
   loader: {
@@ -155,7 +155,6 @@ const styles = StyleSheet.create({
   createButton: {
     alignItems: 'center',
     backgroundColor: sectionColors.events,
-    boxShadow: '0px 8px 18px rgba(0, 0, 0, 0.18)',
     borderRadius: 999,
     bottom: 20,
     height: 60,
@@ -163,5 +162,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute',
     right: space.xl,
+    shadowColor: baseColors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    elevation: 4,
   },
 });

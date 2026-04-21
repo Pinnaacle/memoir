@@ -14,9 +14,12 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const ITEM_WIDTH = 110;
+const COLUMNS = 3;
 
 const FALLBACK_COVER_IMAGE = require('../../../assets/images/fallbackImage.png');
 
@@ -35,7 +38,7 @@ function formatOccurredOn(dateValue: string): string {
 }
 
 export default function EventDetailScreen() {
-  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { activeGroup, isLoading: isLoadingGroups } = useActiveGroup();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
@@ -79,6 +82,10 @@ export default function EventDetailScreen() {
     );
   }
 
+  const horizontalPadding = 16 * 2; // same as your container paddingHorizontal
+  const availableWidth = width - horizontalPadding;
+  const gap = (availableWidth - ITEM_WIDTH * COLUMNS) / COLUMNS;
+
   return (
     <View style={styles.screen}>
       <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
@@ -98,7 +105,7 @@ export default function EventDetailScreen() {
             style={[
               styles.backButton,
               {
-                top: insets.top + space.sm,
+                top: space.lg,
               },
             ]}
           >
@@ -155,8 +162,8 @@ export default function EventDetailScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Photos</Text>
-            <View style={styles.photosRow}>
-              {Array.from({ length: 3 }).map((_, index) => {
+            <View style={[styles.photosRow, { gap: gap }]}>
+              {Array.from({ length: 6 }).map((_, index) => {
                 const photo = photoThumbs[index];
 
                 if (!photo) {
@@ -171,12 +178,22 @@ export default function EventDetailScreen() {
                 }
 
                 return (
-                  <View key={photo} style={styles.photoThumbWrap}>
-                    <Image
-                      contentFit="cover"
-                      source={{ uri: photo }}
-                      style={styles.photoThumb}
-                    />
+                  <View
+                    key={photo}
+                    style={[
+                      {
+                        display: 'flex',
+                        flex: 3,
+                        gap: gap,
+                        marginHorizontal: 'auto',
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        width: '100%',
+                      },
+                    ]}
+                  >
+                    <Image contentFit="cover" source={{ uri: photo }} />
                   </View>
                 );
               })}
@@ -225,16 +242,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   moodPill: {
-    position: 'absolute',
-    left: space.lg,
-    bottom: space.xl,
+    alignItems: 'center',
     backgroundColor: sectionColors.events,
     borderRadius: radius.full,
+    bottom: space.xl + space.xxs,
+    height: 32,
+    justifyContent: 'center',
+    left: space.lg,
     paddingHorizontal: 14,
-    paddingVertical: space.sm,
+    position: 'absolute',
   },
   moodPillText: {
-    color: '#1a1512',
+    color: baseColors.bg,
     fontFamily: textTheme.family.semiBold,
     fontSize: textTheme.size.md,
     lineHeight: textTheme.lineHeight.md,
@@ -243,11 +262,11 @@ const styles = StyleSheet.create({
     backgroundColor: baseColors.bg,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    marginTop: -20,
+    gap: space.lg + space.xs,
+    marginTop: -space.lg,
     paddingHorizontal: space.lg,
     paddingTop: space.xl,
-    paddingBottom: space.xxl,
-    gap: 18,
+    paddingBottom: space.xl,
   },
   title: {
     color: baseColors.text,
@@ -294,19 +313,20 @@ const styles = StyleSheet.create({
   },
   photosRow: {
     flexDirection: 'row',
-    gap: space.sm,
+    flex: 3,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   photoThumbWrap: {
-    width: 111,
-    height: 111,
-    borderRadius: 14,
-    overflow: 'hidden',
-    backgroundColor: baseColors.card,
-  },
-  photoThumb: {
+    display: 'flex',
+    flex: 3,
+    marginHorizontal: 'auto',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
     width: '100%',
-    height: '100%',
   },
+
   photoPlaceholder: {
     width: 111,
     height: 111,
