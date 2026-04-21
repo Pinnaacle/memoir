@@ -272,8 +272,8 @@ const styles = StyleSheet.create({
   typePillText: {
     color: '#1a1512',
     fontFamily: textTheme.family.semiBold,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
+    fontSize: textTheme.size.md,
+    lineHeight: textTheme.lineHeight.md,
   },
   bannerDots: {
     alignItems: 'center',

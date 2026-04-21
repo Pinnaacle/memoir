@@ -535,8 +535,8 @@ const styles = StyleSheet.create({
   emptyText: {
     color: baseColors.textMuted,
     fontFamily: textTheme.family.regular,
-    fontSize: textTheme.size.md,
-    lineHeight: textTheme.lineHeight.md,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
   },
   emptyState: {
     borderStyle: 'solid',
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     color: baseColors.text,
     fontFamily: textTheme.family.medium,
     fontSize: textTheme.size.md,
-    lineHeight: textTheme.lineHeight.md,
+    lineHeight: textTheme.lineHeight.sm,
   },
   viewerHeaderSpacer: {
     width: 36,

@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     color: baseColors.text,
     fontFamily: textTheme.family.semiBold,
     fontSize: textTheme.size.lg,
-    lineHeight: textTheme.lineHeight.lg,
+    lineHeight: textTheme.lineHeight.md,
   },
   control: {
     borderCurve: 'continuous',
@@ -152,16 +152,19 @@ const styles = StyleSheet.create({
   singleLineText: {
     color: inputColors.text,
     fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.lg,
+    fontSize: textTheme.size.md,
+    lineHeight: textTheme.lineHeight.sm,
   },
   controlText: {
     color: inputColors.text,
     fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.lg,
-    lineHeight: textTheme.lineHeight.lg,
+    fontSize: textTheme.size.md,
+    lineHeight: textTheme.lineHeight.sm,
   },
   placeholderText: {
     color: inputColors.placeholder,
+    fontSize: textTheme.size.md,
+    lineHeight: textTheme.lineHeight.sm,
   },
   pickerCard: {
     backgroundColor: baseColors.card,
@@ -174,4 +177,4 @@ const styles = StyleSheet.create({
 
 const fieldStyles = styles;
 
-export { Field, Input, fieldStyles };
+export { Field, fieldStyles, Input };
