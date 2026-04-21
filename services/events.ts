@@ -1,12 +1,7 @@
-import type { SelectedImage } from '@/components/ui/AddImageField';
-import { supabase } from './supabase';
+import { supabase } from '@/lib/supabase';
 
-export const eventKeys = {
-  all: ['events'] as const,
-  lists: () => [...eventKeys.all, 'list'] as const,
-  list: () => [...eventKeys.lists(), 'current-user'] as const,
-  details: () => [...eventKeys.all, 'detail'] as const,
-  detail: (eventId: string) => [...eventKeys.details(), eventId] as const,
+export type EventPhotoInput = {
+  storagePath?: string | null;
 };
 
 export type CreateEventInput = {
@@ -15,7 +10,7 @@ export type CreateEventInput = {
   location: string;
   mood: string;
   notes: string;
-  photos: SelectedImage[];
+  photos: EventPhotoInput[];
 };
 
 export type EventListItem = {

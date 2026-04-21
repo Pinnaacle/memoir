@@ -1,15 +1,13 @@
 import Divider from '@/components/ui/Divider';
 import { Text } from '@/components/ui/Text';
-import { eventKeys, getEventById } from '@/lib/events';
+import { useEventDetailQuery } from '@/hooks/useEvents';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
-import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { CalendarDays, ChevronLeft, MapPin } from 'lucide-react-native';
-import { useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -40,19 +38,10 @@ export default function EventDetailScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
   const eventId = Array.isArray(rawId) ? rawId[0] : rawId;
-  const eventQuery = useQuery({
-    queryKey: eventKeys.detail(eventId ?? 'missing'),
-    queryFn: () => getEventById(eventId!),
-    enabled: Boolean(eventId),
-  });
-
-  const displayDate = useMemo(
-    () =>
-      eventQuery.data?.occurredOn
-        ? formatOccurredOn(eventQuery.data.occurredOn)
-        : '',
-    [eventQuery.data?.occurredOn],
-  );
+  const eventQuery = useEventDetailQuery(eventId);
+  const displayDate = eventQuery.data?.occurredOn
+    ? formatOccurredOn(eventQuery.data.occurredOn)
+    : '';
   const heroImageSource = eventQuery.data?.photos[0]
     ? { uri: eventQuery.data.photos[0] }
     : FALLBACK_COVER_IMAGE;

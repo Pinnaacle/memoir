@@ -1,11 +1,10 @@
 import { Card } from '@/components/ui/Card';
 import Header from '@/components/ui/Header';
 import { Text } from '@/components/ui/Text';
-import { listEventsForCurrentUser, eventKeys } from '@/lib/events';
+import { useEventsQuery } from '@/hooks/useEvents';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text } from '@/theme/type';
-import { useQuery } from '@tanstack/react-query';
 import { type Href, Link } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import {
@@ -33,10 +32,7 @@ function formatOccurredOn(dateValue: string): string {
 }
 
 export default function EventsIndexScreen() {
-  const eventsQuery = useQuery({
-    queryKey: eventKeys.list(),
-    queryFn: listEventsForCurrentUser,
-  });
+  const eventsQuery = useEventsQuery();
 
   const events = eventsQuery.data ?? [];
   const loadError =

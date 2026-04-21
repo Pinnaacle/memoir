@@ -8,7 +8,7 @@ import Chip from '@/components/ui/Chip';
 import Divider from '@/components/ui/Divider';
 import { Field, Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
-import { createEvent, eventKeys } from '@/lib/events';
+import { useCreateEventMutation } from '@/hooks/useEvents';
 import {
   createEventSchema,
   type CreateEventValues,
@@ -17,7 +17,6 @@ import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { useForm } from '@tanstack/react-form';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -60,14 +59,11 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 export default function NewEventScreen() {
-  const queryClient = useQueryClient();
   const [photos, setPhotos] = useState<SelectedImage[]>([]);
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const createEventMutation = useMutation({
-    mutationFn: createEvent,
-  });
+  const createEventMutation = useCreateEventMutation();
 
   const form = useForm({
     defaultValues: {
@@ -97,9 +93,6 @@ export default function NewEventScreen() {
         throw new Error('Failed to save event. Please try again.');
       }
 
-      void queryClient.invalidateQueries({
-        queryKey: eventKeys.all,
-      });
       router.back();
     },
   });
@@ -136,7 +129,6 @@ export default function NewEventScreen() {
       } else {
         setSaveError('Failed to save event. Please try again.');
       }
-    } finally {
       setIsSaving(false);
     }
   };
