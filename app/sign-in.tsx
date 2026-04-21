@@ -200,7 +200,6 @@ const styles = StyleSheet.create({
     color: baseColors.text,
     fontFamily: textTheme.family.regular,
     fontSize: textTheme.size.md,
-    lineHeight: textTheme.lineHeight.md,
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
   },
