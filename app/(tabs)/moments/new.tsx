@@ -73,7 +73,8 @@ export default function NewMomentScreen() {
   );
   const hasFailedUploads = failedUploads.length > 0;
   const firstFailedUploadError =
-    failedUploads.find((photo) => Boolean(photo.uploadError))?.uploadError ?? null;
+    failedUploads.find((photo) => Boolean(photo.uploadError))?.uploadError ??
+    null;
 
   const momentTypeOptions = [
     { label: 'Food', value: 'food' },

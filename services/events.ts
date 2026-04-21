@@ -1,13 +1,10 @@
-import {
-  getSignedImageUrlMap,
-  MAX_IMAGES_PER_UPLOAD,
-} from '@/lib/images';
+import { getSignedImageUrlMap, MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 import {
   getCurrentUserId,
   type JoinedPhoto,
   requireCurrentUserId,
-  resolvePhotoStoragePath
+  resolvePhotoStoragePath,
 } from '@/services/userContext';
 
 export type EventPhotoInput = {
@@ -133,7 +130,6 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
   if (!input.groupId) {
     throw new Error('A group must be selected before creating an event.');
   }
-
 
   const { data: insertedEvent, error: eventError } = await supabase
     .from('events')

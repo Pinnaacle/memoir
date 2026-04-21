@@ -338,7 +338,9 @@ export function AddImageField({
                 ) : null}
 
                 {image.uploadStatus === 'failed' ? (
-                  <View style={[styles.statusOverlay, styles.statusOverlayError]}>
+                  <View
+                    style={[styles.statusOverlay, styles.statusOverlayError]}
+                  >
                     <AlertTriangle
                       color={baseColors.text}
                       size={20}

@@ -4,7 +4,7 @@ import {
   getCurrentUserId,
   type JoinedPhoto,
   requireCurrentUserId,
-  resolvePhotoStoragePath
+  resolvePhotoStoragePath,
 } from '@/services/userContext';
 
 export type MomentPhotoInput = {

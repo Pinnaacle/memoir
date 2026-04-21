@@ -7,10 +7,7 @@ import {
   type ImageBucket,
 } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
-import {
-  ImageManipulator,
-  SaveFormat,
-} from 'expo-image-manipulator';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 export { getCurrentUploadContext } from '@/services/userContext';
 
