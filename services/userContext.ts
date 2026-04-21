@@ -40,8 +40,10 @@ export async function getPersonalGroupIdForUser(
 ): Promise<string> {
   const { data: groups, error } = await supabase
     .from('groups')
-    .select('id, name, group_kind')
-    .eq('personal_owner_user_id', userId);
+    .select('id, name, group_kind, created_at')
+    .eq('personal_owner_user_id', userId)
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
 
   if (error) {
     throw new Error(error.message);
