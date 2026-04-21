@@ -24,18 +24,25 @@ export const useActiveGroupStore = create<ActiveGroupStore>()((set, get) => ({
       return hydrationPromise;
     }
 
+    const activeGroupIdAtHydrationStart = get().activeGroupId;
+
     hydrationPromise = AsyncStorage.getItem(ACTIVE_GROUP_STORAGE_KEY)
       .then((storedGroupId) => {
-        set({
-          activeGroupId: storedGroupId,
+        set((state) => ({
+          // Keep a newer in-memory selection if the user switched spaces
+          // before async hydration finished.
+          activeGroupId:
+            state.activeGroupId === activeGroupIdAtHydrationStart
+              ? storedGroupId
+              : state.activeGroupId,
           hasHydrated: true,
-        });
+        }));
       })
       .catch(() => {
-        set({
-          activeGroupId: null,
+        set((state) => ({
+          activeGroupId: state.activeGroupId,
           hasHydrated: true,
-        });
+        }));
       })
       .finally(() => {
         hydrationPromise = null;
@@ -44,6 +51,10 @@ export const useActiveGroupStore = create<ActiveGroupStore>()((set, get) => ({
     return hydrationPromise;
   },
   setActiveGroupId: async (nextGroupId) => {
+    if (get().activeGroupId === nextGroupId) {
+      return;
+    }
+
     set({ activeGroupId: nextGroupId });
 
     if (nextGroupId) {
