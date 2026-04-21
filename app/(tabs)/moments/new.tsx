@@ -8,7 +8,7 @@ import Divider from '@/components/ui/Divider';
 import { Dropdown } from '@/components/ui/Dropdown';
 import { Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
-import { createMoment } from '@/lib/moments';
+import { useCreateMomentMutation } from '@/hooks/useMoments';
 import {
   type CreateMomentValues,
   createMomentSchema,
@@ -56,6 +56,7 @@ export default function NewMomentScreen() {
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const createMomentMutation = useCreateMomentMutation();
 
   const momentTypeOptions = [
     { label: 'Food', value: 'food' },
@@ -81,13 +82,10 @@ export default function NewMomentScreen() {
       }
 
       try {
-        await withTimeout(
-          createMoment({
-            ...parsed.data,
-            photos,
-          }),
-          SAVE_TIMEOUT_MS,
-        );
+        await createMomentMutation.mutateAsync({
+          ...parsed.data,
+          photos,
+        });
       } catch (error) {
         if (error instanceof Error) {
           throw error;
@@ -130,7 +128,6 @@ export default function NewMomentScreen() {
       } else {
         setSaveError('Failed to save moment. Please try again.');
       }
-    } finally {
       setIsSaving(false);
     }
   };

@@ -1,15 +1,14 @@
 import Divider from '@/components/ui/Divider';
 import { Text } from '@/components/ui/Text';
-import { getMomentById } from '@/lib/moments';
+import { useMomentDetailQuery } from '@/hooks/useMoments';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
-import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { CalendarDays, ChevronLeft } from 'lucide-react-native';
-import { useCallback, useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   type NativeScrollEvent,
@@ -53,62 +52,20 @@ export default function MomentDetailScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
   const momentId = Array.isArray(rawId) ? rawId[0] : rawId;
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [moment, setMoment] =
-    useState<Awaited<ReturnType<typeof getMomentById>>>(null);
-
-  const loadMoment = useCallback(async () => {
-    if (!momentId) {
-      setError('Moment not found.');
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const data = await getMomentById(momentId);
-      if (!data) {
-        setError('Moment not found.');
-      }
-      setMoment(data);
-    } catch (nextError) {
-      if (nextError instanceof Error) {
-        setError(nextError.message);
-      } else {
-        setError('Could not load moment.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [momentId]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void loadMoment();
-    }, [loadMoment]),
-  );
-
-  const displayDate = useMemo(
-    () => (moment ? formatOccurredOn(moment.occurredOn) : ''),
-    [moment],
-  );
-  const displayType = useMemo(
-    () => formatMomentType(moment?.category ?? null),
-    [moment?.category],
-  );
-  const bannerImages = useMemo(() => {
-    if (!moment?.photos?.length) {
-      return [FALLBACK_COVER_IMAGE];
-    }
-
-    return moment.photos;
-  }, [moment?.photos]);
+  const momentQuery = useMomentDetailQuery(momentId);
+  const moment = momentQuery.data;
+  const displayDate = moment ? formatOccurredOn(moment.occurredOn) : '';
+  const displayType = formatMomentType(moment?.category ?? null);
+  const bannerImages =
+    moment?.photos?.length ? moment.photos : [FALLBACK_COVER_IMAGE];
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const photoThumbs = moment?.photos?.slice(0, 3) ?? [];
+  const loadError =
+    momentQuery.error instanceof Error
+      ? momentQuery.error.message
+      : momentQuery.error
+        ? 'Could not load moment.'
+        : null;
 
   function handleBannerScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     if (width <= 0) {
@@ -119,7 +76,7 @@ export default function MomentDetailScreen() {
     setActiveBannerIndex(nextIndex);
   }
 
-  if (isLoading) {
+  if (momentQuery.isPending) {
     return (
       <View style={styles.screenCentered}>
         <ActivityIndicator color={sectionColors.moments} />
@@ -127,10 +84,10 @@ export default function MomentDetailScreen() {
     );
   }
 
-  if (error || !moment) {
+  if (!momentId || loadError || !moment) {
     return (
       <View style={styles.screenCentered}>
-        <Text style={styles.errorText}>{error ?? 'Moment not found.'}</Text>
+        <Text style={styles.errorText}>{loadError ?? 'Moment not found.'}</Text>
         <Pressable
           accessibilityRole="button"
           onPress={() => router.back()}
@@ -192,9 +149,13 @@ export default function MomentDetailScreen() {
 
           {bannerImages.length > 1 ? (
             <View style={styles.bannerDots}>
-              {bannerImages.map((_, index) => (
+              {bannerImages.map((bannerImage, index) => (
                 <View
-                  key={`dot-${index}`}
+                  key={
+                    typeof bannerImage === 'string'
+                      ? `dot-${bannerImage}`
+                      : 'dot-fallback-cover'
+                  }
                   style={[
                     styles.bannerDot,
                     index === activeBannerIndex ? styles.bannerDotActive : null,

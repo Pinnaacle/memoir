@@ -1,12 +1,15 @@
-import type { SelectedImage } from '@/components/ui/AddImageField';
-import { supabase } from './supabase';
+import { supabase } from '@/lib/supabase';
+
+export type MomentPhotoInput = {
+  storagePath?: string | null;
+};
 
 export type CreateMomentInput = {
   momentType: string;
   title: string;
   description: string;
   occurredAt: Date;
-  photos: SelectedImage[];
+  photos: MomentPhotoInput[];
 };
 
 export type MomentListItem = {
@@ -27,61 +30,43 @@ export type MomentDetail = {
   photos: string[];
 };
 
-export async function listMomentsForCurrentUser(): Promise<MomentListItem[]> {
+type LinkedPhotoRow = {
+  moment_id?: string | null;
+  photos?:
+    | { storage_path?: string | null }
+    | { storage_path?: string | null }[]
+    | null;
+};
+
+function resolveStoragePath(link: LinkedPhotoRow): string | null {
+  const relatedPhoto = Array.isArray(link.photos)
+    ? link.photos[0]
+    : link.photos;
+
+  return relatedPhoto?.storage_path ?? null;
+}
+
+async function getCurrentUserId(): Promise<string | null> {
   const {
     data: { user },
-    error: userError,
+    error,
   } = await supabase.auth.getUser();
-
-  if (userError) {
-    throw new Error(userError.message);
-  }
-
-  if (!user) {
-    return [];
-  }
-
-  const { data, error } = await supabase
-    .from('moments')
-    .select('id, title, description, category, occurred_on, created_at')
-    .eq('created_by', user.id)
-    .order('occurred_on', { ascending: false })
-    .order('created_at', { ascending: false });
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((moment) => ({
-    id: moment.id,
-    title: moment.title,
-    description: moment.description,
-    category: moment.category,
-    occurredOn: moment.occurred_on,
-  }));
+  return user?.id ?? null;
 }
 
-export async function createMoment(input: CreateMomentInput): Promise<void> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) {
-    throw new Error(userError.message);
-  }
-
-  if (!user) {
-    throw new Error('You must be signed in to create a moment.');
-  }
-
-  const { data: groups, error: groupError } = await supabase
+async function getPersonalGroupIdForUser(userId: string): Promise<string> {
+  const { data: groups, error } = await supabase
     .from('groups')
     .select('id, name, group_kind')
-    .eq('personal_owner_user_id', user.id);
+    .eq('personal_owner_user_id', userId);
 
-  if (groupError) {
-    throw new Error(groupError.message);
+  if (error) {
+    throw new Error(error.message);
   }
 
   const personalGroup =
@@ -89,17 +74,87 @@ export async function createMoment(input: CreateMomentInput): Promise<void> {
     groups?.find((group) => group.name?.toLowerCase() === 'personal') ??
     groups?.[0];
 
-  if (!personalGroup) {
+  if (!personalGroup?.id) {
     throw new Error(
       'No group found for this user yet. The personal group needs to exist before creating moments.',
     );
   }
 
+  return personalGroup.id;
+}
+
+export async function listMomentsForCurrentUser(): Promise<MomentListItem[]> {
+  const userId = await getCurrentUserId();
+
+  if (!userId) {
+    return [];
+  }
+
+  const { data: moments, error } = await supabase
+    .from('moments')
+    .select('id, title, description, category, occurred_on, created_at')
+    .eq('created_by', userId)
+    .order('occurred_on', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = moments ?? [];
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const momentIds = rows.map((moment) => moment.id);
+  const { data: links, error: linksError } = await supabase
+    .from('moment_photos')
+    .select('moment_id, sort_order, photos(storage_path)')
+    .in('moment_id', momentIds)
+    .order('moment_id', { ascending: true })
+    .order('sort_order', { ascending: true });
+
+  if (linksError) {
+    throw new Error(linksError.message);
+  }
+
+  const coverImageByMomentId = new Map<string, string>();
+
+  for (const link of (links ?? []) as LinkedPhotoRow[]) {
+    const momentId = link.moment_id;
+    const storagePath = resolveStoragePath(link);
+
+    if (!momentId || !storagePath || coverImageByMomentId.has(momentId)) {
+      continue;
+    }
+
+    coverImageByMomentId.set(momentId, storagePath);
+  }
+
+  return rows.map((moment) => ({
+    id: moment.id,
+    title: moment.title,
+    description: moment.description,
+    category: moment.category,
+    occurredOn: moment.occurred_on,
+    coverImage: coverImageByMomentId.get(moment.id),
+  }));
+}
+
+export async function createMoment(input: CreateMomentInput): Promise<string> {
+  const userId = await getCurrentUserId();
+
+  if (!userId) {
+    throw new Error('You must be signed in to create a moment.');
+  }
+
+  const groupId = await getPersonalGroupIdForUser(userId);
   const { data: insertedMoment, error: momentError } = await supabase
     .from('moments')
     .insert({
-      group_id: personalGroup.id,
-      created_by: user.id,
+      group_id: groupId,
+      created_by: userId,
       category: input.momentType,
       title: input.title.trim(),
       description: input.description.trim(),
@@ -116,22 +171,20 @@ export async function createMoment(input: CreateMomentInput): Promise<void> {
     throw new Error('Could not create moment.');
   }
 
-  // Only persist photos that have an uploaded storage path.
-  // Local-only images can be linked after upload flow lands.
   const persistedPhotoCandidates = input.photos.filter((photo) =>
     Boolean(photo.storagePath),
   );
 
   if (persistedPhotoCandidates.length === 0) {
-    return;
+    return insertedMoment.id;
   }
 
   const { data: insertedPhotos, error: photosError } = await supabase
     .from('photos')
     .insert(
       persistedPhotoCandidates.map((photo) => ({
-        group_id: personalGroup.id,
-        uploaded_by: user.id,
+        group_id: groupId,
+        uploaded_by: userId,
         storage_path: photo.storagePath!,
         caption: null,
         taken_at: input.occurredAt.toISOString(),
@@ -144,12 +197,12 @@ export async function createMoment(input: CreateMomentInput): Promise<void> {
   }
 
   if (!insertedPhotos?.length) {
-    return;
+    return insertedMoment.id;
   }
 
   const { error: linksError } = await supabase.from('moment_photos').insert(
     insertedPhotos.map((photo, index) => ({
-      group_id: personalGroup.id,
+      group_id: groupId,
       moment_id: insertedMoment.id,
       photo_id: photo.id,
       sort_order: index,
@@ -159,21 +212,16 @@ export async function createMoment(input: CreateMomentInput): Promise<void> {
   if (linksError) {
     throw new Error(linksError.message);
   }
+
+  return insertedMoment.id;
 }
 
 export async function getMomentById(
   momentId: string,
 ): Promise<MomentDetail | null> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const userId = await getCurrentUserId();
 
-  if (userError) {
-    throw new Error(userError.message);
-  }
-
-  if (!user) {
+  if (!userId) {
     return null;
   }
 
@@ -181,7 +229,7 @@ export async function getMomentById(
     .from('moments')
     .select('id, title, description, category, occurred_on')
     .eq('id', momentId)
-    .eq('created_by', user.id)
+    .eq('created_by', userId)
     .maybeSingle();
 
   if (momentError) {
@@ -203,12 +251,7 @@ export async function getMomentById(
   }
 
   const photos = (links ?? [])
-    .map((link) => {
-      const relatedPhoto = Array.isArray(link.photos)
-        ? link.photos[0]
-        : link.photos;
-      return relatedPhoto?.storage_path ?? null;
-    })
+    .map((link) => resolveStoragePath(link))
     .filter((path): path is string => Boolean(path));
 
   return {

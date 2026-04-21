@@ -1,13 +1,11 @@
 import { Card } from '@/components/ui/Card';
 import { Text } from '@/components/ui/Text';
-import { listMomentsForCurrentUser, type MomentListItem } from '@/lib/moments';
+import { useMomentsQuery } from '@/hooks/useMoments';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text } from '@/theme/type';
-import { useFocusEffect } from '@react-navigation/native';
 import { type Href, Link } from 'expo-router';
 import { Plus } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -45,33 +43,14 @@ function formatMomentType(value: string | null): string {
 }
 
 export default function MomentsScreen() {
-  const [moments, setMoments] = useState<MomentListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  const loadMoments = useCallback(async () => {
-    setIsLoading(true);
-    setLoadError(null);
-
-    try {
-      const rows = await listMomentsForCurrentUser();
-      setMoments(rows);
-    } catch (error) {
-      if (error instanceof Error) {
-        setLoadError(error.message);
-      } else {
-        setLoadError('Failed to load moments.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      void loadMoments();
-    }, [loadMoments]),
-  );
+  const momentsQuery = useMomentsQuery();
+  const moments = momentsQuery.data ?? [];
+  const loadError =
+    momentsQuery.error instanceof Error
+      ? momentsQuery.error.message
+      : momentsQuery.error
+        ? 'Failed to load moments.'
+        : null;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -80,24 +59,24 @@ export default function MomentsScreen() {
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
+        {momentsQuery.isPending ? (
           <ActivityIndicator
             color={sectionColors.moments}
             style={styles.loader}
           />
         ) : null}
 
-        {!isLoading && loadError ? (
+        {!momentsQuery.isPending && loadError ? (
           <Text style={styles.errorText}>{loadError}</Text>
         ) : null}
 
-        {!isLoading && !loadError && moments.length === 0 ? (
+        {!momentsQuery.isPending && !loadError && moments.length === 0 ? (
           <Text style={styles.emptyText}>
             No moments yet. Tap + to create your first one.
           </Text>
         ) : null}
 
-        {!isLoading && !loadError
+        {!momentsQuery.isPending && !loadError
           ? moments.map((moment) => (
               <Link
                 asChild
