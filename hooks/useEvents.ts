@@ -1,10 +1,9 @@
 import {
   createEvent,
   getEventById,
-  listEventsForCurrentUser,
+  listEventsForGroup,
 } from '@/services/events';
 import {
-  skipToken,
   useMutation,
   useQuery,
   useQueryClient,
@@ -13,22 +12,33 @@ import {
 export const eventKeys = {
   all: ['events'] as const,
   lists: () => [...eventKeys.all, 'list'] as const,
-  list: () => [...eventKeys.lists(), 'current-user'] as const,
+  list: (groupId: string | null) =>
+    [...eventKeys.lists(), groupId ?? 'no-group'] as const,
   details: () => [...eventKeys.all, 'detail'] as const,
-  detail: (eventId: string) => [...eventKeys.details(), eventId] as const,
+  detail: (eventId: string, groupId: string | null) =>
+    [...eventKeys.details(), eventId, groupId ?? 'no-group'] as const,
 };
 
-export function useEventsQuery() {
+export function useEventsQuery(groupId?: string | null) {
   return useQuery({
-    queryKey: eventKeys.list(),
-    queryFn: listEventsForCurrentUser,
+    queryKey: eventKeys.list(groupId ?? null),
+    queryFn: () => (groupId ? listEventsForGroup(groupId) : Promise.resolve([])),
   });
 }
 
-export function useEventDetailQuery(eventId?: string) {
+export function useEventDetailQuery(
+  eventId?: string,
+  groupId?: string | null,
+) {
+  const resolvedGroupId = groupId ?? null;
+
   return useQuery({
-    queryKey: eventKeys.detail(eventId ?? 'missing'),
-    queryFn: eventId ? () => getEventById(eventId) : skipToken,
+    queryKey: eventKeys.detail(eventId ?? 'missing', resolvedGroupId),
+    enabled: Boolean(eventId && resolvedGroupId),
+    queryFn: () =>
+      eventId && resolvedGroupId
+        ? getEventById(eventId, resolvedGroupId)
+        : Promise.resolve(null),
   });
 }
 

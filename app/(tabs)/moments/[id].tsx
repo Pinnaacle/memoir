@@ -1,5 +1,6 @@
 import Divider from '@/components/ui/Divider';
 import { Text } from '@/components/ui/Text';
+import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useMomentDetailQuery } from '@/hooks/useMoments';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
@@ -49,10 +50,11 @@ function formatMomentType(value: string | null): string {
 
 export default function MomentDetailScreen() {
   const { width } = useWindowDimensions();
+  const { activeGroup, isLoading: isLoadingGroups } = useActiveGroup();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
   const momentId = Array.isArray(rawId) ? rawId[0] : rawId;
-  const momentQuery = useMomentDetailQuery(momentId);
+  const momentQuery = useMomentDetailQuery(momentId, activeGroup?.id);
   const moment = momentQuery.data;
   const displayDate = moment ? formatOccurredOn(moment.occurredOn) : '';
   const displayType = formatMomentType(moment?.category ?? null);
@@ -77,7 +79,7 @@ export default function MomentDetailScreen() {
     setActiveBannerIndex(nextIndex);
   }
 
-  if (momentQuery.isPending) {
+  if (isLoadingGroups || momentQuery.isPending) {
     return (
       <View style={styles.screenCentered}>
         <ActivityIndicator color={sectionColors.moments} />

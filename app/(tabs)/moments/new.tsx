@@ -8,6 +8,7 @@ import Divider from '@/components/ui/Divider';
 import { Dropdown } from '@/components/ui/Dropdown';
 import { Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
+import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useCreateMomentMutation } from '@/hooks/useMoments';
 import {
   type CreateMomentValues,
@@ -52,6 +53,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 export default function NewMomentScreen() {
+  const { activeGroup } = useActiveGroup();
   const [photos, setPhotos] = useState<SelectedImage[]>([]);
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -81,9 +83,14 @@ export default function NewMomentScreen() {
         throw new Error(parsed.error.issues[0]?.message ?? 'Invalid input.');
       }
 
+      if (!activeGroup?.id) {
+        throw new Error('Choose a space before saving this moment.');
+      }
+
       try {
         await createMomentMutation.mutateAsync({
           ...parsed.data,
+          groupId: activeGroup.id,
           photos,
         });
       } catch (error) {
@@ -115,6 +122,11 @@ export default function NewMomentScreen() {
     setSaveError(null);
     const parsed = createMomentSchema.safeParse(form.state.values);
     if (!parsed.success) {
+      return;
+    }
+
+    if (!activeGroup?.id) {
+      setSaveError('Choose a space before saving this moment.');
       return;
     }
 
