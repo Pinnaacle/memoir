@@ -33,6 +33,7 @@ export default function Header({ title, color, onClose, onSave }: HeaderProps) {
         </Text>
         <View style={[styles.spaceDiv, { alignItems: 'flex-end' }]}>
           <Button
+            alignSelf="flex-end"
             color={color}
             label="Save"
             onPress={onSave}

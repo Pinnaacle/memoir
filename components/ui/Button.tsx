@@ -7,16 +7,21 @@ interface ButtonProps extends React.ComponentProps<typeof Pressable> {
   label: string;
   variant?: 'default' | 'round';
   color?: string;
+  alignSelf?: 'flex-start' | 'flex-end' | 'center';
 }
 
 export default function Button({
   label,
   variant = 'default',
   color,
+  alignSelf,
   ...rest
 }: ButtonProps) {
   return (
-    <Pressable {...rest} style={[styles[variant], { backgroundColor: color }]}>
+    <Pressable
+      {...rest}
+      style={[styles[variant], { backgroundColor: color, alignSelf }]}
+    >
       {variant === 'round' ? (
         <Plus color={baseColors.bg} size={28} />
       ) : (
@@ -31,6 +36,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     paddingHorizontal: 20,
     paddingVertical: 8,
+    alignSelf: 'center',
   },
   round: {
     padding: 10,
