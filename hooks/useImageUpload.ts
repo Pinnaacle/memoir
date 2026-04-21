@@ -8,7 +8,9 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
-type SetImages = (updater: (current: SelectedImage[]) => SelectedImage[]) => void;
+type SetImages = (
+  updater: (current: SelectedImage[]) => SelectedImage[],
+) => void;
 
 type UseImageUploadArgs = {
   bucket: ImageBucket;
@@ -59,7 +61,7 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
       setImages((current) =>
         current.map((image) =>
           newImages.some((picked) => picked.id === image.id)
-            ? { ...image, uploadStatus: 'uploading' }
+            ? { ...image, uploadStatus: 'uploading', uploadError: null }
             : image,
         ),
       );
@@ -71,9 +73,7 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
       } catch (error) {
         queryClient.removeQueries({ queryKey: imageUploadKeys.context });
         const message =
-          error instanceof Error
-            ? error.message
-            : 'Could not prepare upload.';
+          error instanceof Error ? error.message : 'Could not prepare upload.';
 
         setImages((current) =>
           current.map((image) =>
