@@ -70,6 +70,7 @@ const DefaultCard = ({
 
         <View style={[styles.headerDefault, styles.header]}>
           <Text
+            numberOfLines={1}
             role="heading"
             variant="h2"
             aria-level="3"
@@ -82,7 +83,9 @@ const DefaultCard = ({
       </View>
       <View style={styles.content}>
         <Text style={[styles.type]}>{type}</Text>
-        <Text style={[styles.description]}>{description}</Text>
+        <Text numberOfLines={2} style={[styles.description]}>
+          {description}
+        </Text>
       </View>
     </View>
   );
@@ -111,7 +114,13 @@ const CompressedCard = ({
         <View style={styles.overlay} />
       </View>
       <View style={[styles.headerCompressed, styles.header]}>
-        <Text role="heading" variant="h2" aria-level="3" style={[styles.title]}>
+        <Text
+          numberOfLines={1}
+          role="heading"
+          variant="h2"
+          aria-level="3"
+          style={[styles.title]}
+        >
           {title}
         </Text>
         <Text style={[styles.date, { color: color }]}>{date}</Text>
@@ -172,6 +181,7 @@ const DetailedCard = ({
 
         <View style={styles.header}>
           <Text
+            numberOfLines={1}
             role="heading"
             variant="h2"
             aria-level="3"
@@ -185,7 +195,9 @@ const DetailedCard = ({
         </View>
       </View>
 
-      <Text style={[styles.description]}>{description}</Text>
+      <Text numberOfLines={2} style={[styles.description]}>
+        {description}
+      </Text>
       <View style={styles.imageContainerDetailed}>
         {images?.slice(0, 4).map((img, index) => (
           <Image
