@@ -2,7 +2,6 @@ import Header, { TAB_HEADER_CONTENT_HEIGHT } from '@/components/ui/Header';
 import { eventKeys } from '@/hooks/useEvents';
 import { momentKeys } from '@/hooks/useMoments';
 import { useActiveGroupStore } from '@/stores/useActiveGroupStore';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { Tabs } from 'expo-router';
 import { CalendarDays, Heart, House, Image, Star } from 'lucide-react-native';
@@ -100,16 +99,10 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="moments"
-        options={({ route }) => {
-          const focusedRouteName =
-            getFocusedRouteNameFromRoute(route) ?? 'index';
-
-          return {
-            title: 'Moments',
-            headerShown: focusedRouteName !== '[id]',
-            tabBarActiveTintColor: sectionColors.moments,
-            tabBarIcon: ({ color }) => <Heart color={color} size={24} />,
-          };
+        options={{
+          title: 'Moments',
+          tabBarActiveTintColor: sectionColors.moments,
+          tabBarIcon: ({ color }) => <Heart color={color} size={24} />,
         }}
       />
       <Tabs.Screen

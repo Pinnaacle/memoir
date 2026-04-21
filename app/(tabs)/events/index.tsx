@@ -124,7 +124,6 @@ const styles = StyleSheet.create({
   content: {
     gap: space.md + space.xs,
     paddingHorizontal: space.lg,
-    // paddingTop: space.xl,
     paddingBottom: 110,
   },
   loader: {
