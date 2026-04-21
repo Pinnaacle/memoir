@@ -15,12 +15,7 @@ interface HeaderProps {
 
 export const TAB_HEADER_CONTENT_HEIGHT = 88;
 
-export default function Header({
-  title,
-  tagLine,
-  color,
-  height,
-}: HeaderProps) {
+export default function Header({ title, tagLine, color, height }: HeaderProps) {
   return (
     <SafeAreaView
       edges={['top']}
