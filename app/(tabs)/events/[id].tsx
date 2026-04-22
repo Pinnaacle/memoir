@@ -44,21 +44,22 @@ export default function EventDetailScreen() {
   const rawId = params.id;
   const eventId = Array.isArray(rawId) ? rawId[0] : rawId;
   const eventQuery = useEventDetailQuery(eventId, activeGroup?.id);
-  const displayDate = eventQuery.data?.occurredOn
-    ? formatOccurredOn(eventQuery.data.occurredOn)
+  const event = eventQuery.data;
+  const displayDate = event?.occurredOn
+    ? formatOccurredOn(event.occurredOn)
     : '';
-  const heroImageUrl = eventQuery.data?.photos[0] ?? null;
+  const heroImageUrl = event?.photos[0]?.url ?? null;
   const heroImageSource = heroImageUrl
     ? { uri: heroImageUrl }
     : FALLBACK_COVER_IMAGE;
-  const photoThumbs = eventQuery.data?.photos.slice(0, 3) ?? [];
+  const photoThumbs = event?.photos.slice(0, 3) ?? [];
   const loadError =
     eventQuery.error instanceof Error
       ? eventQuery.error.message
       : eventQuery.error
         ? 'Could not load event.'
         : null;
-  const hasNotes = Boolean(eventQuery.data?.notes?.trim());
+  const hasNotes = Boolean(event?.notes?.trim());
 
   if (isLoadingGroups || eventQuery.isPending) {
     return (
@@ -68,7 +69,7 @@ export default function EventDetailScreen() {
     );
   }
 
-  if (!eventId || loadError || !eventQuery.data) {
+  if (!eventId || loadError || !event) {
     return (
       <View style={styles.screenCentered}>
         <Text style={styles.errorText}>{loadError ?? 'Event not found.'}</Text>
@@ -113,15 +114,15 @@ export default function EventDetailScreen() {
             <ChevronLeft color={baseColors.text} size={22} />
           </Pressable>
 
-          {eventQuery.data.mood ? (
+          {event.mood ? (
             <View style={styles.moodPill}>
-              <Text style={styles.moodPillText}>{eventQuery.data.mood}</Text>
+              <Text style={styles.moodPillText}>{event.mood}</Text>
             </View>
           ) : null}
         </View>
 
         <View style={styles.bodyCard}>
-          <Text style={styles.title}>{eventQuery.data.title}</Text>
+          <Text style={styles.title}>{event.title}</Text>
 
           <View style={styles.metaStack}>
             <View style={styles.metaRow}>
@@ -129,12 +130,10 @@ export default function EventDetailScreen() {
               <Text style={styles.dateText}>{displayDate}</Text>
             </View>
 
-            {eventQuery.data.locationText ? (
+            {event.locationText ? (
               <View style={styles.metaRow}>
                 <MapPin color={baseColors.textSoft} size={14} />
-                <Text style={styles.locationText}>
-                  {eventQuery.data.locationText}
-                </Text>
+                <Text style={styles.locationText}>{event.locationText}</Text>
               </View>
             ) : null}
           </View>
@@ -144,7 +143,7 @@ export default function EventDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Mood</Text>
             <Text style={styles.sectionBody}>
-              {eventQuery.data.mood ?? 'No mood added'}
+              {event.mood ?? 'No mood added'}
             </Text>
           </View>
 
@@ -154,7 +153,7 @@ export default function EventDetailScreen() {
 
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Notes</Text>
-                <Text style={styles.sectionBody}>{eventQuery.data.notes}</Text>
+                <Text style={styles.sectionBody}>{event.notes}</Text>
               </View>
             </>
           ) : null}
@@ -180,21 +179,10 @@ export default function EventDetailScreen() {
 
                 return (
                   <View
-                    key={photo}
-                    style={[
-                      {
-                        display: 'flex',
-                        flex: 3,
-                        gap: gap,
-                        marginHorizontal: 'auto',
-                        flexDirection: 'row',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        width: '100%',
-                      },
-                    ]}
+                    key={photo.storagePath}
+                    style={[styles.photoThumbWrap, { gap }]}
                   >
-                    <Image contentFit="cover" source={{ uri: photo }} />
+                    <Image contentFit="cover" source={{ uri: photo.url }} />
                   </View>
                 );
               })}
