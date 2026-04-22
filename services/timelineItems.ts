@@ -1,9 +1,9 @@
 import { getSignedImageUrlMap, IMAGE_BUCKET_ID } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 import {
-    getCurrentUserId,
-    type JoinedPhoto,
-    resolvePhotoStoragePath,
+  getCurrentUserId,
+  type JoinedPhoto,
+  resolvePhotoStoragePath,
 } from '@/services/userContext';
 
 type TimelineItemRow = Record<string, unknown>;
