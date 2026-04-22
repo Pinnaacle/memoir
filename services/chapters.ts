@@ -207,21 +207,17 @@ export async function listChaptersForGroup(
     Array.from(momentIdSet),
     Array.from(eventIdSet),
   );
-  const allPaths = new Set<string>();
-  for (const paths of photosByRef.values()) {
-    for (const path of paths) {
-      allPaths.add(path);
-    }
-  }
-  const signedUrls = await getSignedImageUrlMap(Array.from(allPaths));
 
-  return rows.map((chapter) => {
+  const previewPathsByChapter = new Map<string, string[]>();
+  const pathsToSign = new Set<string>();
+
+  for (const chapter of rows) {
     const items = itemsByChapter.get(chapter.id) ?? [];
-    const images: string[] = [];
+    const chapterPaths: string[] = [];
     const seenPaths = new Set<string>();
 
     for (const item of items) {
-      if (images.length >= PREVIEW_IMAGE_LIMIT) break;
+      if (chapterPaths.length >= PREVIEW_IMAGE_LIMIT) break;
       if (!item.ref_id || !item.ref_type) continue;
       if (item.ref_type !== 'moment' && item.ref_type !== 'event') continue;
 
@@ -229,15 +225,27 @@ export async function listChaptersForGroup(
       if (!paths) continue;
 
       for (const path of paths) {
-        if (images.length >= PREVIEW_IMAGE_LIMIT) break;
+        if (chapterPaths.length >= PREVIEW_IMAGE_LIMIT) break;
         if (seenPaths.has(path)) continue;
 
-        const url = signedUrls.get(path);
-        if (!url) continue;
-
         seenPaths.add(path);
-        images.push(url);
+        chapterPaths.push(path);
+        pathsToSign.add(path);
       }
+    }
+
+    previewPathsByChapter.set(chapter.id, chapterPaths);
+  }
+
+  const signedUrls = await getSignedImageUrlMap(Array.from(pathsToSign));
+
+  return rows.map((chapter) => {
+    const paths = previewPathsByChapter.get(chapter.id) ?? [];
+    const images: string[] = [];
+
+    for (const path of paths) {
+      const url = signedUrls.get(path);
+      if (url) images.push(url);
     }
 
     return {

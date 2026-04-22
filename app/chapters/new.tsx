@@ -35,27 +35,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const FALLBACK_COVER_IMAGE = require('../../assets/images/fallbackImage.png');
 
-const SAVE_TIMEOUT_MS = 10000;
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      reject(new Error('Failed to save chapter. Please try again.'));
-    }, timeoutMs);
-
-    promise.then(
-      (value) => {
-        clearTimeout(timeoutId);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timeoutId);
-        reject(error);
-      },
-    );
-  });
-}
-
 function formatShortDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -241,7 +220,7 @@ export default function NewChapterScreen() {
     setIsSaving(true);
 
     try {
-      await withTimeout(form.handleSubmit(), SAVE_TIMEOUT_MS);
+      await form.handleSubmit();
     } catch (error) {
       if (error instanceof Error) {
         setSaveError(error.message);
