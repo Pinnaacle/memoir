@@ -105,9 +105,11 @@ const DefaultCard = ({
       </View>
       <View style={styles.content}>
         <Text style={[styles.type]}>{type}</Text>
-        <Text numberOfLines={2} style={[styles.description]}>
-          {description}
-        </Text>
+        {description && (
+          <Text numberOfLines={2} style={[styles.description]}>
+            {description}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -192,9 +194,11 @@ const DetailedCard = ({
         </View>
       ) : null}
 
-      <Text numberOfLines={2} style={[styles.description]}>
-        {description}
-      </Text>
+      {description && (
+        <Text numberOfLines={2} style={[styles.description]}>
+          {description}
+        </Text>
+      )}
       <View style={styles.imageContainerDetailed}>
         {images?.slice(0, 4).map((img, index) => (
           <Image
@@ -250,7 +254,7 @@ const styles = StyleSheet.create({
   },
 
   overlay: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     position: 'absolute',
     top: 0,
     left: 0,
@@ -303,8 +307,10 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: space.xl,
-    gap: space.md,
+    paddingTop: space.lg,
+    paddingBottom: space.xl,
+    paddingHorizontal: space.xl,
+    gap: space.sm,
   },
   type: {
     color: baseColors.textSoft,
