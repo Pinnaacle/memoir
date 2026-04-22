@@ -374,38 +374,6 @@ export default function EventDetailScreen() {
           />
           <View style={styles.heroOverlay} />
 
-          <Pressable
-            accessibilityHint="Returns to the events list"
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-            onPress={() => router.back()}
-            style={[
-              styles.backButton,
-              {
-                top: space.lg,
-              },
-            ]}
-          >
-            <ChevronLeft color={baseColors.text} size={22} />
-          </Pressable>
-
-          <Pressable
-            accessibilityHint="Opens event actions"
-            accessibilityLabel="More options"
-            accessibilityRole="button"
-            disabled={isMutatingEvent}
-            onPress={() => setIsMenuOpen(true)}
-            style={[
-              styles.menuButton,
-              {
-                top: space.lg,
-              },
-              isMutatingEvent ? styles.menuButtonDisabled : null,
-            ]}
-          >
-            <Ellipsis color={baseColors.text} size={22} />
-          </Pressable>
-
           {event.mood ? (
             <View style={styles.moodPill}>
               <Text style={styles.moodPillText}>{event.mood}</Text>
@@ -517,6 +485,32 @@ export default function EventDetailScreen() {
         </View>
       </ScrollView>
 
+      <View pointerEvents="box-none" style={styles.topButtons}>
+        <Pressable
+          accessibilityHint="Returns to the events list"
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <ChevronLeft color={baseColors.text} size={22} />
+        </Pressable>
+
+        <Pressable
+          accessibilityHint="Opens event actions"
+          accessibilityLabel="More options"
+          accessibilityRole="button"
+          disabled={isMutatingEvent}
+          onPress={() => setIsMenuOpen(true)}
+          style={[
+            styles.menuButton,
+            isMutatingEvent ? styles.menuButtonDisabled : null,
+          ]}
+        >
+          <Ellipsis color={baseColors.text} size={22} />
+        </Pressable>
+      </View>
+
       <Modal
         animationType="fade"
         onRequestClose={() => setIsMenuOpen(false)}
@@ -591,6 +585,13 @@ const styles = StyleSheet.create({
   heroOverlay: {
     backgroundColor: 'rgba(0, 0, 0, 0.22)',
     ...StyleSheet.absoluteFillObject,
+  },
+  topButtons: {
+    position: 'absolute',
+    top: space.lg,
+    left: 0,
+    right: 0,
+    zIndex: 1,
   },
   backButton: {
     position: 'absolute',

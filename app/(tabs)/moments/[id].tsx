@@ -142,16 +142,6 @@ export default function MomentDetailScreen() {
           </ScrollView>
           <View style={styles.bannerOverlay} />
 
-          <Pressable
-            accessibilityHint="Returns to moments list"
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <ChevronLeft color={baseColors.text} size={22} />
-          </Pressable>
-
           <View style={styles.typePill}>
             <Text style={styles.typePillText}>{displayType}</Text>
           </View>
@@ -233,6 +223,18 @@ export default function MomentDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <View pointerEvents="box-none" style={styles.topButtons}>
+        <Pressable
+          accessibilityHint="Returns to moments list"
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <ChevronLeft color={baseColors.text} size={22} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -266,6 +268,13 @@ const styles = StyleSheet.create({
   bannerOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  topButtons: {
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 1,
   },
   backButton: {
     alignItems: 'center',
