@@ -170,15 +170,28 @@ export default function NewChapterScreen() {
 
   const initialValues = chapter ? getInitialValues(chapter) : EMPTY_VALUES;
   const initialSelection = chapter ? getInitialSelection(chapter) : [];
+  const groupKey = activeGroup?.id ?? 'no-group';
+
+  if (isEdit && chapterId) {
+    return (
+      <ChapterForm
+        activeGroupId={activeGroup?.id ?? null}
+        chapterId={chapterId}
+        initialSelection={initialSelection}
+        initialValues={initialValues}
+        isEdit
+        key={`${chapterId}:${groupKey}`}
+      />
+    );
+  }
 
   return (
     <ChapterForm
-      key={`${chapterId ?? 'new'}:${activeGroup?.id ?? 'no-group'}`}
       activeGroupId={activeGroup?.id ?? null}
-      chapterId={chapterId}
       initialSelection={initialSelection}
       initialValues={initialValues}
-      isEdit={isEdit}
+      isEdit={false}
+      key={`new:${groupKey}`}
     />
   );
 }

@@ -83,13 +83,15 @@ export type ChapterInitialSelection = {
   id: string;
 };
 
-export type ChapterFormProps = {
+type ChapterFormBaseProps = {
   activeGroupId: string | null;
-  chapterId?: string;
-  isEdit: boolean;
   initialValues: CreateChapterValues;
   initialSelection: ChapterInitialSelection[];
 };
+
+export type ChapterFormProps =
+  | (ChapterFormBaseProps & { isEdit: false })
+  | (ChapterFormBaseProps & { isEdit: true; chapterId: string });
 
 const chapterTypeOptions = [
   { label: 'Vacation', value: 'vacation' },
@@ -101,13 +103,8 @@ const chapterTypeOptions = [
   { label: 'Miscellaneous', value: 'miscellaneous' },
 ];
 
-export default function ChapterForm({
-  activeGroupId,
-  chapterId,
-  isEdit,
-  initialValues,
-  initialSelection,
-}: ChapterFormProps) {
+export default function ChapterForm(props: ChapterFormProps) {
+  const { activeGroupId, initialValues, initialSelection, isEdit } = props;
   const initialKeys = useMemo(
     () => initialSelection.map((entry) => makeItemKey(entry.kind, entry.id)),
     [initialSelection],
@@ -161,10 +158,10 @@ export default function ChapterForm({
     groupId: string,
     items: ChapterItemInput[],
   ) => {
-    if (isEdit && chapterId) {
+    if (props.isEdit) {
       await updateChapterMutation.mutateAsync({
         ...values,
-        chapterId,
+        chapterId: props.chapterId,
         groupId,
         items,
       });
