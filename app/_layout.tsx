@@ -144,20 +144,20 @@ export default function RootLayout() {
                   presentation: 'card',
                 }}
               />
-            <Stack.Screen
-              name="chapters/new"
-              options={{
-                animation: 'slide_from_bottom',
-                presentation: 'modal',
-              }}
-            />
-            <Stack.Screen
-              name="chapters/[id]"
-              options={{
-                animation: 'slide_from_right',
-                presentation: 'card',
-              }}
-            />
+              <Stack.Screen
+                name="chapters/new"
+                options={{
+                  animation: 'slide_from_bottom',
+                  presentation: 'modal',
+                }}
+              />
+              <Stack.Screen
+                name="chapters/[id]"
+                options={{
+                  animation: 'slide_from_right',
+                  presentation: 'card',
+                }}
+              />
             </Stack.Protected>
             <Stack.Screen name="+not-found" />
           </Stack>

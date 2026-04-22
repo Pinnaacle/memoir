@@ -204,9 +204,7 @@ export default function ChapterDetailScreen() {
               {`In this chapter (${chapter.entries.length})`}
             </Text>
             {chapter.entries.length === 0 ? (
-              <Text style={styles.emptyText}>
-                No linked memories yet.
-              </Text>
+              <Text style={styles.emptyText}>No linked memories yet.</Text>
             ) : (
               <View style={styles.entriesList}>
                 {chapter.entries.map((entry) => (

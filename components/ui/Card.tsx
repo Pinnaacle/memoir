@@ -186,10 +186,7 @@ const DetailedCard = ({
 
       {type ? (
         <View
-          style={[
-            styles.typePill,
-            color ? { backgroundColor: color } : null,
-          ]}
+          style={[styles.typePill, color ? { backgroundColor: color } : null]}
         >
           <Text style={styles.typePillText}>{type}</Text>
         </View>
