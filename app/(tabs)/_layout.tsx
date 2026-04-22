@@ -1,10 +1,17 @@
 import Header, { TAB_HEADER_CONTENT_HEIGHT } from '@/components/ui/Header';
+import { chapterKeys } from '@/hooks/useChapters';
 import { eventKeys } from '@/hooks/useEvents';
 import { momentKeys } from '@/hooks/useMoments';
 import { useActiveGroupStore } from '@/stores/useActiveGroupStore';
 import { useQueryClient } from '@tanstack/react-query';
 import { Tabs } from 'expo-router';
-import { CalendarDays, Heart, House, Image, Star } from 'lucide-react-native';
+import {
+  BookOpen,
+  CalendarDays,
+  Heart,
+  House,
+  Image,
+} from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { baseColors, sectionColors } from '../../theme/colors';
@@ -53,6 +60,9 @@ export default function TabLayout() {
     });
     void queryClient.invalidateQueries({
       queryKey: eventKeys.all,
+    });
+    void queryClient.invalidateQueries({
+      queryKey: chapterKeys.all,
     });
   }, [activeGroupId, queryClient]);
 
@@ -118,7 +128,7 @@ export default function TabLayout() {
         options={{
           title: 'Chapters',
           tabBarActiveTintColor: sectionColors.chapters,
-          tabBarIcon: ({ color }) => <Star color={color} size={24} />,
+          tabBarIcon: ({ color }) => <BookOpen color={color} size={24} />,
         }}
       />
       <Tabs.Screen

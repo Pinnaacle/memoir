@@ -472,6 +472,17 @@ export async function deleteMoment(momentId: string, groupId: string) {
     throw new Error(deleteMomentError.message);
   }
 
+  const { error: deleteChapterItemsError } = await supabase
+    .from('chapter_items')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('ref_type', 'moment')
+    .eq('ref_id', momentId);
+
+  if (deleteChapterItemsError) {
+    throw new Error(deleteChapterItemsError.message);
+  }
+
   void cleanupPhotos(photoIds, storagePaths);
 }
 

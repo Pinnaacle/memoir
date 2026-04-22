@@ -461,6 +461,17 @@ export async function deleteEvent(eventId: string, groupId: string) {
     throw new Error(deleteEventError.message);
   }
 
+  const { error: deleteChapterItemsError } = await supabase
+    .from('chapter_items')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('ref_type', 'event')
+    .eq('ref_id', eventId);
+
+  if (deleteChapterItemsError) {
+    throw new Error(deleteChapterItemsError.message);
+  }
+
   void cleanupPhotos(photoIds, storagePaths);
 }
 
