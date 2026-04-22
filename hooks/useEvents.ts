@@ -1,3 +1,5 @@
+import { memoryWallKeys } from '@/hooks/useMemoryWall';
+import { timelineKeys } from '@/hooks/useTimelineItems';
 import {
   createEvent,
   deleteEvent,
@@ -44,9 +46,17 @@ export function useCreateEventMutation() {
   return useMutation({
     mutationFn: createEvent,
     onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: eventKeys.all,
-      });
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: eventKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: timelineKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: memoryWallKeys.all,
+        }),
+      ]);
     },
   });
 }
@@ -57,9 +67,17 @@ export function useUpdateEventMutation() {
   return useMutation({
     mutationFn: updateEvent,
     onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: eventKeys.all,
-      });
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: eventKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: timelineKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: memoryWallKeys.all,
+        }),
+      ]);
     },
   });
 }
@@ -71,9 +89,17 @@ export function useDeleteEventMutation() {
     mutationFn: ({ eventId, groupId }: { eventId: string; groupId: string }) =>
       deleteEvent(eventId, groupId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: eventKeys.lists(),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: eventKeys.lists(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: timelineKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: memoryWallKeys.all,
+        }),
+      ]);
     },
   });
 }

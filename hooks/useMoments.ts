@@ -1,13 +1,15 @@
+import { memoryWallKeys } from '@/hooks/useMemoryWall';
+import { timelineKeys } from '@/hooks/useTimelineItems';
 import {
+  type CreateMomentInput,
+  type MomentDetail,
+  type MomentDetailPhoto,
+  type MomentListItem,
+  type UpdateMomentInput,
   createMoment,
   deleteMoment,
   getMomentById,
   listMomentsForGroup,
-  type CreateMomentInput,
-  type MomentDetail,
-  type MomentListItem,
-  type MomentDetailPhoto,
-  type UpdateMomentInput,
   updateMoment,
 } from '@/services/moments';
 import {
@@ -239,9 +241,17 @@ export function useCreateMomentMutation() {
     },
     onSuccess: (momentId, input, context) => {
       if (!context?.tempId) {
-        void queryClient.invalidateQueries({
-          queryKey: momentKeys.all,
-        });
+        void Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: momentKeys.all,
+          }),
+          queryClient.invalidateQueries({
+            queryKey: timelineKeys.all,
+          }),
+          queryClient.invalidateQueries({
+            queryKey: memoryWallKeys.all,
+          }),
+        ]);
         return;
       }
 
@@ -260,9 +270,17 @@ export function useCreateMomentMutation() {
         exact: true,
         queryKey: momentKeys.detail(context.tempId, input.groupId),
       });
-      void queryClient.invalidateQueries({
-        queryKey: momentKeys.all,
-      });
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: momentKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: timelineKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: memoryWallKeys.all,
+        }),
+      ]);
     },
   });
 }
@@ -316,9 +334,17 @@ export function useUpdateMomentMutation() {
         momentId,
         buildMomentDetail(momentId, input),
       );
-      void queryClient.invalidateQueries({
-        queryKey: momentKeys.all,
-      });
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: momentKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: timelineKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: memoryWallKeys.all,
+        }),
+      ]);
     },
   });
 }
@@ -356,9 +382,17 @@ export function useDeleteMomentMutation() {
       restoreMomentCache(queryClient, context, input.momentId);
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: momentKeys.lists(),
-      });
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: momentKeys.lists(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: timelineKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: memoryWallKeys.all,
+        }),
+      ]);
     },
   });
 }
