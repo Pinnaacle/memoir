@@ -262,7 +262,7 @@ function Modal({
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: space.lg,
-    paddingVertical: space.xl,
+    paddingBottom: space.xl,
   },
   container: {
     flex: 1,
