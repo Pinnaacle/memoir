@@ -1,7 +1,9 @@
 import {
   createMoment,
+  deleteMoment,
   getMomentById,
   listMomentsForGroup,
+  updateMoment,
 } from '@/services/moments';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -44,6 +46,38 @@ export function useCreateMomentMutation() {
 
   return useMutation({
     mutationFn: createMoment,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: momentKeys.all,
+      });
+    },
+  });
+}
+
+export function useUpdateMomentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateMoment,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: momentKeys.all,
+      });
+    },
+  });
+}
+
+export function useDeleteMomentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      momentId,
+      groupId,
+    }: {
+      momentId: string;
+      groupId: string;
+    }) => deleteMoment(momentId, groupId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: momentKeys.all,

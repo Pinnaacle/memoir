@@ -3,6 +3,7 @@ import {
   type SelectedImage,
 } from '@/components/ui/AddImageField';
 import Divider from '@/components/ui/Divider';
+import PopoverMenu from '@/components/ui/PopoverMenu';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
 import {
@@ -28,7 +29,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -427,6 +427,7 @@ export default function EventDetailScreen() {
               maxImages={MAX_IMAGES_PER_UPLOAD}
               onChange={handlePhotoChange}
               onRequestUpload={startUpload}
+              showRemoveButton={false}
               value={photos}
             />
 
@@ -511,53 +512,26 @@ export default function EventDetailScreen() {
         </Pressable>
       </View>
 
-      <Modal
-        animationType="fade"
-        onRequestClose={() => setIsMenuOpen(false)}
-        transparent
+      <PopoverMenu
+        items={[
+          {
+            label: 'Edit event',
+            onPress: handleEdit,
+          },
+          {
+            label: isDeleting
+              ? 'Deleting...'
+              : isSavingPhotos
+                ? 'Saving photos...'
+                : 'Delete event',
+            onPress: handleDelete,
+            disabled: isMutatingEvent,
+            variant: 'danger',
+          },
+        ]}
+        onClose={() => setIsMenuOpen(false)}
         visible={isMenuOpen}
-      >
-        <View style={styles.menuOverlay}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setIsMenuOpen(false)}
-            style={styles.menuBackdrop}
-          />
-          <View style={styles.menuPanel}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={handleEdit}
-              style={({ pressed }) => [
-                styles.menuAction,
-                pressed ? styles.menuActionPressed : null,
-              ]}
-            >
-              <Text style={styles.menuActionText}>Edit event</Text>
-            </Pressable>
-
-            <View style={styles.menuDivider} />
-
-            <Pressable
-              accessibilityRole="button"
-              disabled={isMutatingEvent}
-              onPress={handleDelete}
-              style={({ pressed }) => [
-                styles.menuAction,
-                pressed ? styles.menuActionPressed : null,
-                isMutatingEvent ? styles.menuActionDisabled : null,
-              ]}
-            >
-              <Text style={styles.menuActionDangerText}>
-                {isDeleting
-                  ? 'Deleting...'
-                  : isSavingPhotos
-                    ? 'Saving photos...'
-                    : 'Delete event'}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      />
     </View>
   );
 }
@@ -720,49 +694,6 @@ const styles = StyleSheet.create({
     fontFamily: textTheme.family.medium,
     fontSize: textTheme.size.sm,
     lineHeight: textTheme.lineHeight.sm,
-  },
-  menuOverlay: {
-    flex: 1,
-  },
-  menuBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  menuPanel: {
-    position: 'absolute',
-    right: space.lg,
-    top: space.lg + 84,
-    minWidth: 168,
-    backgroundColor: baseColors.bg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(107, 101, 96, 0.16)',
-    overflow: 'hidden',
-  },
-  menuAction: {
-    paddingHorizontal: space.lg,
-    paddingVertical: space.md,
-  },
-  menuActionPressed: {
-    opacity: 0.82,
-  },
-  menuActionDisabled: {
-    opacity: 0.45,
-  },
-  menuActionText: {
-    color: baseColors.text,
-    fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  menuActionDangerText: {
-    color: baseColors.textError,
-    fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: 'rgba(107, 101, 96, 0.12)',
   },
   errorText: {
     color: baseColors.textError,

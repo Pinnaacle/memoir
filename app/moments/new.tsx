@@ -1,315 +1,202 @@
-import { DatePicker } from '@/components/DatePicker';
+import MomentForm from '@/components/MomentForm';
 import ModalTopBar from '@/components/ModalTopBar';
-import {
-  AddImageField,
-  type SelectedImage,
-} from '@/components/ui/AddImageField';
+import { type SelectedImage } from '@/components/ui/AddImageField';
 import Divider from '@/components/ui/Divider';
-import { Dropdown } from '@/components/ui/Dropdown';
-import { Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
-import { useImageUpload } from '@/hooks/useImageUpload';
-import { useCreateMomentMutation } from '@/hooks/useMoments';
-import { MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
-import {
-  type CreateMomentValues,
-  createMomentSchema,
-} from '@/lib/validation/moment';
+import { useMomentDetailQuery } from '@/hooks/useMoments';
+import { type CreateMomentValues } from '@/lib/validation/moment';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
-import { useForm } from '@tanstack/react-form';
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import {
+  router,
+  useGlobalSearchParams,
+  useLocalSearchParams,
+} from 'expo-router';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const SAVE_TIMEOUT_MS = 10000;
+const EMPTY_VALUES: CreateMomentValues = {
+  momentType: '',
+  title: '',
+  description: '',
+  occurredAt: new Date(),
+};
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      reject(new Error('Failed to save moment. Please try again.'));
-    }, timeoutMs);
+function getParamValue(value?: string | string[]): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
 
-    promise.then(
-      (value) => {
-        clearTimeout(timeoutId);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timeoutId);
-        reject(error);
-      },
-    );
-  });
+function parseOccurredAt(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number);
+
+  if ([year, month, day].every((part) => Number.isFinite(part))) {
+    return new Date(year, month - 1, day);
+  }
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function getInitialValues(moment: {
+  title: string;
+  description: string | null;
+  category: string | null;
+  occurredOn: string;
+}): CreateMomentValues {
+  return {
+    momentType: moment.category ?? '',
+    title: moment.title,
+    description: moment.description ?? '',
+    occurredAt: parseOccurredAt(moment.occurredOn),
+  };
+}
+
+function getInitialPhotos(
+  photos: { storagePath: string; url: string }[],
+): SelectedImage[] {
+  return photos.map((photo) => ({
+    id: photo.storagePath,
+    uri: photo.url,
+    fileName: photo.storagePath.split('/').pop() ?? null,
+    storagePath: photo.storagePath,
+    uploadStatus: 'uploaded',
+    uploadError: null,
+  }));
+}
+
+function getLoadError(options: {
+  activeGroupId: string | null | undefined;
+  error: unknown;
+  hasMoment: boolean;
+  isEdit: boolean;
+  isLoadingGroups: boolean;
+  isMomentPending: boolean;
+}): string | null {
+  const {
+    activeGroupId,
+    error,
+    hasMoment,
+    isEdit,
+    isLoadingGroups,
+    isMomentPending,
+  } = options;
+
+  if (!isEdit) {
+    return null;
+  }
+
+  if (!isLoadingGroups && !activeGroupId) {
+    return 'Choose a space before editing this moment.';
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error) {
+    return 'Could not load moment.';
+  }
+
+  if (!isLoadingGroups && !isMomentPending && !hasMoment) {
+    return 'Moment not found.';
+  }
+
+  return null;
 }
 
 export default function NewMomentScreen() {
-  const { activeGroup } = useActiveGroup();
-  const [photos, setPhotos] = useState<SelectedImage[]>([]);
-  const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const createMomentMutation = useCreateMomentMutation();
-  const { startUpload } = useImageUpload({
-    bucket: 'moments',
-    setImages: setPhotos,
-  });
-  const isUploading = photos.some(
-    (photo) => photo.uploadStatus === 'uploading',
+  const { activeGroup, isLoading: isLoadingGroups } = useActiveGroup();
+  const localParams = useLocalSearchParams<{
+    momentId?: string | string[];
+    id?: string | string[];
+  }>();
+  const globalParams = useGlobalSearchParams<{
+    momentId?: string | string[];
+    id?: string | string[];
+  }>();
+  const momentId = getParamValue(
+    localParams.momentId ??
+      globalParams.momentId ??
+      localParams.id ??
+      globalParams.id,
   );
-  const failedUploads = photos.filter(
-    (photo) => photo.uploadStatus === 'failed',
-  );
-  const hasFailedUploads = failedUploads.length > 0;
-  const firstFailedUploadError =
-    failedUploads.find((photo) => Boolean(photo.uploadError))?.uploadError ??
-    null;
-
-  const momentTypeOptions = [
-    { label: 'Food', value: 'food' },
-    { label: 'Outfit', value: 'outfit' },
-    { label: 'Tiny Joy', value: 'tiny-joy' },
-    { label: 'Cozy Scene', value: 'cozy-scene' },
-    { label: 'Nature', value: 'nature' },
-    { label: 'Connection', value: 'connection' },
-    { label: 'Personal Win', value: 'personal-win' },
-  ];
-
-  const form = useForm({
-    defaultValues: {
-      momentType: '',
-      title: '',
-      description: '',
-      occurredAt: new Date(),
-    } satisfies CreateMomentValues,
-    onSubmit: async ({ value }) => {
-      const parsed = createMomentSchema.safeParse(value);
-      if (!parsed.success) {
-        throw new Error(parsed.error.issues[0]?.message ?? 'Invalid input.');
-      }
-
-      if (!activeGroup?.id) {
-        throw new Error('Choose a space before saving this moment.');
-      }
-
-      const uploadedPhotos = photos
-        .filter(
-          (photo) =>
-            photo.uploadStatus === 'uploaded' && Boolean(photo.storagePath),
-        )
-        .slice(0, MAX_IMAGES_PER_UPLOAD)
-        .map((photo) => ({ storagePath: photo.storagePath! }));
-
-      try {
-        await createMomentMutation.mutateAsync({
-          ...parsed.data,
-          groupId: activeGroup.id,
-          photos: uploadedPhotos,
-        });
-      } catch (error) {
-        if (error instanceof Error) {
-          throw error;
-        }
-        throw new Error('Failed to save moment. Please try again.');
-      }
-
-      router.back();
-    },
+  const isEdit = Boolean(momentId);
+  const momentQuery = useMomentDetailQuery(momentId, activeGroup?.id);
+  const moment = momentQuery.data;
+  const isLoadingMoment = isEdit && (isLoadingGroups || momentQuery.isPending);
+  const loadError = getLoadError({
+    activeGroupId: activeGroup?.id,
+    error: momentQuery.error,
+    hasMoment: Boolean(moment),
+    isEdit,
+    isLoadingGroups,
+    isMomentPending: momentQuery.isPending,
   });
 
-  const validation = useMemo(
-    () => createMomentSchema.safeParse(form.state.values),
-    [form.state.values],
-  );
-  const fieldErrors = validation.success
-    ? {}
-    : validation.error.flatten().fieldErrors;
-  const submitError = saveError ?? form.state.errorMap.onSubmit;
+  if (isLoadingMoment) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <KeyboardAvoidingView
+          style={styles.screen}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ModalTopBar
+            color={sectionColors.moments}
+            onClose={() => router.back()}
+            title="Edit Moment"
+          />
+          <Divider color={sectionColors.moments} />
+          <View style={styles.loadingState}>
+            <ActivityIndicator color={sectionColors.moments} />
+            <Text style={styles.submittingText}>Loading moment...</Text>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
 
-  const handleSave = async () => {
-    if (isSaving) {
-      return;
-    }
+  if (loadError) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <KeyboardAvoidingView
+          style={styles.screen}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ModalTopBar
+            color={sectionColors.moments}
+            onClose={() => router.back()}
+            title="Edit Moment"
+          />
+          <Divider color={sectionColors.moments} />
+          <View style={styles.loadingState}>
+            <Text style={styles.errorText}>{loadError}</Text>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
 
-    setHasTriedSubmit(true);
-    setSaveError(null);
-    const parsed = createMomentSchema.safeParse(form.state.values);
-    if (!parsed.success) {
-      return;
-    }
-
-    if (!activeGroup?.id) {
-      setSaveError('Choose a space before saving this moment.');
-      return;
-    }
-
-    if (isUploading) {
-      setSaveError('Please wait for photos to finish uploading.');
-      return;
-    }
-
-    if (hasFailedUploads) {
-      setSaveError(
-        firstFailedUploadError
-          ? `Some photos failed to upload: ${firstFailedUploadError}`
-          : 'Some photos failed to upload. Remove or retry them before saving.',
-      );
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      await withTimeout(form.handleSubmit(), SAVE_TIMEOUT_MS);
-    } catch (error) {
-      if (error instanceof Error) {
-        setSaveError(error.message);
-      } else {
-        setSaveError('Failed to save moment. Please try again.');
-      }
-      setIsSaving(false);
-    }
-  };
+  const initialValues = moment ? getInitialValues(moment) : EMPTY_VALUES;
+  const initialPhotos = moment ? getInitialPhotos(moment.photos) : [];
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top']}>
-      <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ModalTopBar
-          color={sectionColors.moments}
-          onClose={() => router.back()}
-          onSave={handleSave}
-          title="New Moment"
-        />
-        <Divider color={sectionColors.moments} />
-
-        <ScrollView
-          automaticallyAdjustKeyboardInsets
-          contentContainerStyle={styles.content}
-          contentInsetAdjustmentBehavior="automatic"
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.form}>
-            <form.Field name="momentType">
-              {(field) => (
-                <Dropdown
-                  color={sectionColors.moments}
-                  onChange={field.handleChange}
-                  options={momentTypeOptions}
-                  placeholder="Moment type"
-                  value={field.state.value || undefined}
-                />
-              )}
-            </form.Field>
-            {hasTriedSubmit && fieldErrors.momentType?.[0] ? (
-              <Text style={styles.errorText}>{fieldErrors.momentType[0]}</Text>
-            ) : null}
-
-            <form.Field name="title">
-              {(field) => (
-                <Input
-                  label="Title"
-                  onBlur={field.handleBlur}
-                  onChangeText={field.handleChange}
-                  placeholder="Give this moment a memorable title..."
-                  value={field.state.value}
-                />
-              )}
-            </form.Field>
-            {hasTriedSubmit && fieldErrors.title?.[0] ? (
-              <Text style={styles.errorText}>{fieldErrors.title[0]}</Text>
-            ) : null}
-
-            <form.Field name="occurredAt">
-              {(field) => (
-                <DatePicker
-                  color={sectionColors.moments}
-                  label="Date"
-                  onChange={field.handleChange}
-                  required
-                  value={field.state.value}
-                />
-              )}
-            </form.Field>
-            {hasTriedSubmit && fieldErrors.occurredAt?.[0] ? (
-              <Text style={styles.errorText}>{fieldErrors.occurredAt[0]}</Text>
-            ) : null}
-
-            <form.Field name="description">
-              {(field) => (
-                <Input
-                  label="Description"
-                  minRows={4}
-                  onBlur={field.handleBlur}
-                  onChangeText={field.handleChange}
-                  placeholder="Describe this special moment..."
-                  required
-                  value={field.state.value}
-                  variant="textarea"
-                />
-              )}
-            </form.Field>
-            {hasTriedSubmit && fieldErrors.description?.[0] ? (
-              <Text style={styles.errorText}>{fieldErrors.description[0]}</Text>
-            ) : null}
-
-            <AddImageField
-              color={sectionColors.moments}
-              maxImages={MAX_IMAGES_PER_UPLOAD}
-              onChange={setPhotos}
-              onRequestUpload={startUpload}
-              value={photos}
-            />
-
-            {hasFailedUploads ? (
-              <Pressable
-                accessibilityHint="Retries failed photo uploads"
-                accessibilityLabel="Retry failed uploads"
-                accessibilityRole="button"
-                disabled={isUploading || isSaving}
-                onPress={() => {
-                  setSaveError(null);
-                  void startUpload(failedUploads);
-                }}
-                style={({ pressed }) => [
-                  styles.retryButton,
-                  pressed ? styles.retryButtonPressed : null,
-                  isUploading || isSaving ? styles.retryButtonDisabled : null,
-                ]}
-              >
-                <Text style={styles.retryButtonText}>Retry failed uploads</Text>
-              </Pressable>
-            ) : null}
-
-            {submitError ? (
-              <Text style={styles.errorText}>{submitError}</Text>
-            ) : null}
-
-            {isSaving ? (
-              <View style={styles.submittingRow}>
-                <ActivityIndicator color={sectionColors.moments} />
-                <Text style={styles.submittingText}>Saving moment...</Text>
-              </View>
-            ) : null}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <MomentForm
+      key={`${momentId ?? 'new'}:${activeGroup?.id ?? 'no-group'}`}
+      activeGroupId={activeGroup?.id ?? null}
+      initialPhotos={initialPhotos}
+      initialValues={initialValues}
+      isEdit={isEdit}
+      momentId={momentId}
+    />
   );
 }
 
@@ -318,18 +205,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: baseColors.bg,
   },
-  content: {
-    paddingHorizontal: space.lg,
-    paddingTop: space.lg,
-    paddingBottom: space.xxl,
-    gap: space.xl,
-  },
-  form: {
-    gap: space.xl,
-  },
-  dropdownField: {
-    gap: space.sm,
-  },
   errorText: {
     color: baseColors.textError,
     fontFamily: textTheme.family.medium,
@@ -337,35 +212,17 @@ const styles = StyleSheet.create({
     lineHeight: textTheme.lineHeight.xs,
     marginTop: -space.md,
   },
-  submittingRow: {
+  loadingState: {
     alignItems: 'center',
-    flexDirection: 'row',
+    flex: 1,
     gap: space.sm,
+    justifyContent: 'center',
+    paddingHorizontal: space.lg,
   },
   submittingText: {
     color: baseColors.textSoft,
     fontFamily: textTheme.family.medium,
     fontSize: textTheme.size.sm,
     lineHeight: textTheme.lineHeight.sm,
-  },
-  retryButton: {
-    alignSelf: 'flex-start',
-    borderColor: sectionColors.moments,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
-  },
-  retryButtonText: {
-    color: sectionColors.moments,
-    fontFamily: textTheme.family.semiBold,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  retryButtonPressed: {
-    opacity: 0.82,
-  },
-  retryButtonDisabled: {
-    opacity: 0.45,
   },
 });
