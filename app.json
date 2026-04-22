@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/cameron_mascot.png",
     "favicon": "./assets/images/cameron_mascot.png",
-    "scheme": "Memoir",
+    "scheme": "memoir",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
