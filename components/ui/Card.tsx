@@ -3,22 +3,44 @@ import { baseColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
-import { differenceInDays, parse } from 'date-fns';
+import { differenceInDays } from 'date-fns';
 import { Image } from 'expo-image';
-import { BookOpen, Heart, House, MapPin, PlaneIcon } from 'lucide-react-native';
+import { MapPin } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 interface CardProps extends React.ComponentProps<typeof View> {
   variant?: 'default' | 'compressed' | 'detailed';
   title: string;
   date: string;
+  occurredOn?: string | Date;
   coverImage?: string | number;
   images?: string[];
   location?: string;
   description?: string;
   type?: string;
-  icon?: 'heart' | 'plain' | 'house' | 'book';
   color?: string;
+}
+
+function formatRelativeDays(occurredOn?: string | Date): string | null {
+  if (!occurredOn) {
+    return null;
+  }
+
+  const parsed = occurredOn instanceof Date ? occurredOn : new Date(occurredOn);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  const days = differenceInDays(new Date(), parsed);
+
+  if (days <= 0) {
+    return 'Today';
+  }
+  if (days === 1) {
+    return '1 day ago';
+  }
+  return `${days} days ago`;
 }
 
 function resolveImageSource(image?: string | number) {
@@ -137,70 +159,41 @@ const CompressedCard = ({
 const DetailedCard = ({
   title,
   date,
+  occurredOn,
   description,
   images,
-  icon,
+  type,
   color,
 }: CardProps) => {
-  const d2 = parse(date, 'MMMM d, yyyy', new Date());
-  const days = differenceInDays(new Date(), d2);
+  const relative = formatRelativeDays(occurredOn);
 
   return (
     <View style={[styles.cardDetailed, styles.card]}>
-      <View
-        style={[
-          {
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: space.sm,
-          },
-        ]}
-      >
-        {icon === 'heart' && (
-          <Heart
-            color={baseColors.text}
-            size={24}
-            style={[{ paddingHorizontal: space.lg }]}
-          />
-        )}
-        {icon === 'plain' && (
-          <PlaneIcon
-            color={baseColors.text}
-            size={24}
-            style={[{ paddingHorizontal: space.lg }]}
-          />
-        )}
-        {icon === 'house' && (
-          <House
-            color={baseColors.text}
-            size={24}
-            style={[{ paddingHorizontal: space.lg }]}
-          />
-        )}
-        {icon === 'book' && (
-          <BookOpen
-            color={baseColors.text}
-            size={24}
-            style={[{ paddingHorizontal: space.lg }]}
-          />
-        )}
-
-        <View style={styles.header}>
-          <Text
-            numberOfLines={1}
-            role="heading"
-            variant="h2"
-            aria-level="3"
-            style={[styles.title]}
-          >
-            {title}
-          </Text>
-          <Text style={[styles.date, { color: color }]}>
-            {days === null ? date : `${date} • ${days} days ago`}
-          </Text>
-        </View>
+      <View style={styles.detailedHeader}>
+        <Text
+          numberOfLines={1}
+          role="heading"
+          variant="h2"
+          aria-level="3"
+          style={[styles.title]}
+        >
+          {title}
+        </Text>
+        <Text style={[styles.date, { color: color }]}>
+          {relative ? `${date} • ${relative}` : date}
+        </Text>
       </View>
+
+      {type ? (
+        <View
+          style={[
+            styles.typePill,
+            color ? { backgroundColor: color } : null,
+          ]}
+        >
+          <Text style={styles.typePillText}>{type}</Text>
+        </View>
+      ) : null}
 
       <Text numberOfLines={2} style={[styles.description]}>
         {description}
@@ -271,6 +264,23 @@ const styles = StyleSheet.create({
   header: {
     gap: space.xxs,
     paddingHorizontal: space.md,
+  },
+  detailedHeader: {
+    gap: space.xxs,
+  },
+  typePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: baseColors.card,
+    borderRadius: radius.full,
+    paddingHorizontal: space.sm + space.xxs,
+    paddingVertical: space.xxs,
+  },
+  typePillText: {
+    color: baseColors.bg,
+    fontFamily: textTheme.family.semiBold,
+    fontSize: textTheme.size.xs,
+    lineHeight: textTheme.lineHeight.xs,
+    letterSpacing: 0.3,
   },
   headerCompressed: {
     position: 'absolute',

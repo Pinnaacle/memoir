@@ -104,12 +104,11 @@ export default function ChaptersScreen() {
                     <Card
                       color={sectionColors.chapters}
                       date={formatOccurredOn(chapter.occurredOn)}
-                      description={
-                        chapter.description ?? formatChapterType(chapter.chapterType)
-                      }
-                      icon="book"
+                      description={chapter.description ?? undefined}
                       images={chapter.images}
+                      occurredOn={chapter.occurredOn}
                       title={chapter.title}
+                      type={formatChapterType(chapter.chapterType)}
                       variant="detailed"
                     />
                   </Pressable>
