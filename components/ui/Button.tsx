@@ -1,4 +1,5 @@
 import { baseColors } from '@/theme/colors';
+import { getSaveLabel, type SaveState } from '@/lib/interaction';
 import { Plus } from 'lucide-react-native';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text } from './Text';
@@ -8,6 +9,7 @@ interface ButtonProps extends React.ComponentProps<typeof Pressable> {
   variant?: 'default' | 'round';
   color?: string;
   alignSelf?: 'flex-start' | 'flex-end' | 'center';
+  saveState?: SaveState;
 }
 
 export default function Button({
@@ -15,17 +17,30 @@ export default function Button({
   variant = 'default',
   color,
   alignSelf,
+  disabled,
+  saveState,
+  onPress,
   ...rest
 }: ButtonProps) {
+  const isLocked = disabled || saveState === 'saving' || saveState === 'saved';
+  const resolvedLabel = saveState ? getSaveLabel(saveState, label) : label;
+
   return (
     <Pressable
       {...rest}
-      style={[styles[variant], { backgroundColor: color, alignSelf }]}
+      disabled={isLocked}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles[variant],
+        { alignSelf, backgroundColor: color },
+        pressed && !isLocked ? styles.pressed : null,
+        isLocked ? styles.disabled : null,
+      ]}
     >
       {variant === 'round' ? (
         <Plus color={baseColors.bg} size={28} />
       ) : (
-        <Text style={styles.text}>{label}</Text>
+        <Text style={styles.text}>{resolvedLabel}</Text>
       )}
     </Pressable>
   );
@@ -50,5 +65,11 @@ const styles = StyleSheet.create({
   },
   text: {
     color: baseColors.bg,
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+  disabled: {
+    opacity: 0.45,
   },
 });
