@@ -1,16 +1,24 @@
 import Divider from '@/components/ui/Divider';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
-import { useEventDetailQuery } from '@/hooks/useEvents';
+import { useDeleteEventMutation, useEventDetailQuery } from '@/hooks/useEvents';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { CalendarDays, ChevronLeft, MapPin } from 'lucide-react-native';
+import {
+  CalendarDays,
+  ChevronLeft,
+  Ellipsis,
+  MapPin,
+} from 'lucide-react-native';
+import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -43,6 +51,8 @@ export default function EventDetailScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
   const eventId = Array.isArray(rawId) ? rawId[0] : rawId;
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const deleteEventMutation = useDeleteEventMutation();
   const eventQuery = useEventDetailQuery(eventId, activeGroup?.id);
   const event = eventQuery.data;
   const displayDate = event?.occurredOn
@@ -60,6 +70,62 @@ export default function EventDetailScreen() {
         ? 'Could not load event.'
         : null;
   const hasNotes = Boolean(event?.notes?.trim());
+  const isDeleting = deleteEventMutation.isPending;
+
+  const removeEvent = async () => {
+    if (!eventId || !activeGroup?.id) {
+      return;
+    }
+
+    try {
+      await deleteEventMutation.mutateAsync({
+        eventId,
+        groupId: activeGroup.id,
+      });
+      router.back();
+    } catch (error) {
+      Alert.alert(
+        'Could not delete event',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    }
+  };
+
+  const handleEdit = () => {
+    setIsMenuOpen(false);
+
+    if (!eventId) {
+      return;
+    }
+
+    router.push(`/events/new?eventId=${encodeURIComponent(eventId)}`);
+  };
+
+  const handleDelete = () => {
+    setIsMenuOpen(false);
+
+    if (!eventId || !activeGroup?.id || isDeleting) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete event?',
+      'This event and its photos will be removed permanently.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void removeEvent();
+          },
+        },
+      ],
+    );
+  };
 
   if (isLoadingGroups || eventQuery.isPending) {
     return (
@@ -112,6 +178,23 @@ export default function EventDetailScreen() {
             ]}
           >
             <ChevronLeft color={baseColors.text} size={22} />
+          </Pressable>
+
+          <Pressable
+            accessibilityHint="Opens event actions"
+            accessibilityLabel="More options"
+            accessibilityRole="button"
+            disabled={isDeleting}
+            onPress={() => setIsMenuOpen(true)}
+            style={[
+              styles.menuButton,
+              {
+                top: space.lg,
+              },
+              isDeleting ? styles.menuButtonDisabled : null,
+            ]}
+          >
+            <Ellipsis color={baseColors.text} size={22} />
           </Pressable>
 
           {event.mood ? (
@@ -190,6 +273,50 @@ export default function EventDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setIsMenuOpen(false)}
+        transparent
+        visible={isMenuOpen}
+      >
+        <View style={styles.menuOverlay}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setIsMenuOpen(false)}
+            style={styles.menuBackdrop}
+          />
+          <View style={styles.menuPanel}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleEdit}
+              style={({ pressed }) => [
+                styles.menuAction,
+                pressed ? styles.menuActionPressed : null,
+              ]}
+            >
+              <Text style={styles.menuActionText}>Edit event</Text>
+            </Pressable>
+
+            <View style={styles.menuDivider} />
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={isDeleting}
+              onPress={handleDelete}
+              style={({ pressed }) => [
+                styles.menuAction,
+                pressed ? styles.menuActionPressed : null,
+                isDeleting ? styles.menuActionDisabled : null,
+              ]}
+            >
+              <Text style={styles.menuActionDangerText}>
+                {isDeleting ? 'Deleting...' : 'Delete event'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -229,6 +356,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  menuButton: {
+    position: 'absolute',
+    right: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  menuButtonDisabled: {
+    opacity: 0.45,
   },
   moodPill: {
     alignItems: 'center',
@@ -332,6 +474,49 @@ const styles = StyleSheet.create({
     fontFamily: textTheme.family.regular,
     fontSize: textTheme.size.sm,
     lineHeight: 33,
+  },
+  menuOverlay: {
+    flex: 1,
+  },
+  menuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  menuPanel: {
+    position: 'absolute',
+    right: space.lg,
+    top: space.lg + 48,
+    minWidth: 168,
+    backgroundColor: baseColors.bg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(107, 101, 96, 0.16)',
+    overflow: 'hidden',
+  },
+  menuAction: {
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+  },
+  menuActionPressed: {
+    opacity: 0.82,
+  },
+  menuActionDisabled: {
+    opacity: 0.45,
+  },
+  menuActionText: {
+    color: baseColors.text,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
+  },
+  menuActionDangerText: {
+    color: baseColors.textError,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: 'rgba(107, 101, 96, 0.12)',
   },
   errorText: {
     color: baseColors.textError,

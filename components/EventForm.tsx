@@ -8,7 +8,10 @@ import Chip from '@/components/ui/Chip';
 import Divider from '@/components/ui/Divider';
 import { Field, Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
-import { useCreateEventMutation } from '@/hooks/useEvents';
+import {
+  useCreateEventMutation,
+  useUpdateEventMutation,
+} from '@/hooks/useEvents';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import {
@@ -44,14 +47,10 @@ const MOOD_OPTIONS = [
 
 export type EventFormProps = {
   activeGroupId: string | null;
-};
-
-const EMPTY_VALUES: CreateEventValues = {
-  title: '',
-  occurredAt: new Date(),
-  location: '',
-  mood: 'Romantic',
-  notes: '',
+  eventId?: string;
+  initialPhotos: SelectedImage[];
+  initialValues: CreateEventValues;
+  isEdit: boolean;
 };
 
 function getUploadedPhotos(photos: SelectedImage[]) {
@@ -97,12 +96,17 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 
 export default function EventForm({
   activeGroupId,
+  eventId,
+  initialPhotos,
+  initialValues,
+  isEdit,
 }: EventFormProps) {
-  const [photos, setPhotos] = useState<SelectedImage[]>([]);
+  const [photos, setPhotos] = useState(initialPhotos);
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const createEventMutation = useCreateEventMutation();
+  const updateEventMutation = useUpdateEventMutation();
   const { startUpload } = useImageUpload({
     bucket: 'events',
     setImages: setPhotos,
@@ -120,8 +124,26 @@ export default function EventForm({
   const uploadedPhotos = getUploadedPhotos(photos);
   const retryUploadsDisabled = isUploading || isSaving;
 
+  const saveEvent = async (values: CreateEventValues, groupId: string) => {
+    if (isEdit && eventId) {
+      await updateEventMutation.mutateAsync({
+        ...values,
+        eventId,
+        groupId,
+        photos: uploadedPhotos,
+      });
+      return;
+    }
+
+    await createEventMutation.mutateAsync({
+      ...values,
+      groupId,
+      photos: uploadedPhotos,
+    });
+  };
+
   const form = useForm({
-    defaultValues: EMPTY_VALUES,
+    defaultValues: initialValues,
     onSubmit: async ({ value }) => {
       const parsed = createEventSchema.safeParse(value);
 
@@ -134,11 +156,7 @@ export default function EventForm({
       }
 
       try {
-        await createEventMutation.mutateAsync({
-          ...parsed.data,
-          groupId: activeGroupId,
-          photos: uploadedPhotos,
-        });
+        await saveEvent(parsed.data, activeGroupId);
       } catch (error) {
         if (error instanceof Error) {
           throw error;
@@ -206,7 +224,7 @@ export default function EventForm({
           color={sectionColors.events}
           onClose={() => router.back()}
           onSave={handleSave}
-          title="New Event"
+          title={isEdit ? 'Edit Event' : 'New Event'}
         />
         <Divider color={sectionColors.events} />
 
