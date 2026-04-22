@@ -1,10 +1,14 @@
 import { GroupScopePicker } from '@/components/GroupScopePicker';
+import { signOut } from '@/lib/auth';
+import { radius } from '@/theme/radius';
+import PopoverMenu from '@/components/ui/PopoverMenu';
 import { Text } from '@/components/ui/Text';
 import { baseColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { CircleUser } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface HeaderProps {
@@ -17,6 +21,31 @@ interface HeaderProps {
 export const TAB_HEADER_CONTENT_HEIGHT = 108;
 
 export default function Header({ title, tagLine, color, height }: HeaderProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    if (isSigningOut) {
+      return;
+    }
+
+    setIsSigningOut(true);
+
+    try {
+      await signOut();
+      setIsMenuOpen(false);
+    } catch (error) {
+      Alert.alert(
+        'Could not sign out',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+      setIsSigningOut(false);
+      return;
+    }
+
+    setIsSigningOut(false);
+  }
+
   return (
     <SafeAreaView
       edges={['top']}
@@ -37,11 +66,38 @@ export default function Header({ title, tagLine, color, height }: HeaderProps) {
               sheetTitle="Switch space"
               size="header"
             />
-            <CircleUser color={baseColors.text} size={24} />
+            <Pressable
+              accessibilityHint="Opens account actions"
+              accessibilityLabel="Open account menu"
+              accessibilityRole="button"
+              disabled={isSigningOut}
+              onPress={() => setIsMenuOpen(true)}
+              style={({ pressed }) => [
+                styles.accountButton,
+                pressed ? styles.accountButtonPressed : null,
+                isSigningOut ? styles.accountButtonDisabled : null,
+              ]}
+            >
+              <CircleUser color={baseColors.text} size={24} />
+            </Pressable>
           </View>
         </View>
         {tagLine && <Text style={styles.tagLine}>{tagLine}</Text>}
       </View>
+
+      <PopoverMenu
+        dismissDisabled={isSigningOut}
+        items={[
+          {
+            label: isSigningOut ? 'Signing out...' : 'Sign out',
+            onPress: handleSignOut,
+            disabled: isSigningOut,
+            variant: 'danger',
+          },
+        ]}
+        onClose={() => setIsMenuOpen(false)}
+        visible={isMenuOpen}
+      />
     </SafeAreaView>
   );
 }
@@ -71,6 +127,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: space.sm,
+  },
+  accountButton: {
+    alignItems: 'center',
+    borderRadius: radius.full,
+    justifyContent: 'center',
+  },
+  accountButtonPressed: {
+    opacity: 0.82,
+  },
+  accountButtonDisabled: {
+    opacity: 0.45,
   },
   tagLine: {
     color: baseColors.textSoft,
