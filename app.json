@@ -15,7 +15,7 @@
         "light": "./assets/images/ios-light.png",
         "dark": "./assets/images/ios-dark.png"
       },
-      "bundleIdentifier": "com.anonymous.memoir",
+      "bundleIdentifier": "com.anonymous.memoir"
     },
     "android": {
       "adaptiveIcon": {
