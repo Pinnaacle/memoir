@@ -1,33 +1,40 @@
+import {
+  AddImageField,
+  type SelectedImage,
+} from '@/components/ui/AddImageField';
 import Divider from '@/components/ui/Divider';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
-import { useMomentDetailQuery } from '@/hooks/useMoments';
+import {
+  useDeleteMomentMutation,
+  useMomentDetailQuery,
+  useUpdateMomentMutation,
+} from '@/hooks/useMoments';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { CalendarDays, ChevronLeft } from 'lucide-react-native';
-import { useState } from 'react';
+import { CalendarDays, ChevronLeft, Ellipsis } from 'lucide-react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
+  Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
   View,
 } from 'react-native';
-
-const ITEM_WIDTH = 110;
-const COLUMNS = 3;
 
 const FALLBACK_COVER_IMAGE = require('../../assets/images/fallbackImage.png');
 
 function formatOccurredOn(dateValue: string): string {
   const date = new Date(dateValue);
+
   if (Number.isNaN(date.getTime())) {
     return dateValue;
   }
@@ -37,6 +44,18 @@ function formatOccurredOn(dateValue: string): string {
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+function parseOccurredAt(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number);
+
+  if ([year, month, day].every((part) => Number.isFinite(part))) {
+    return new Date(year, month - 1, day);
+  }
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 function formatMomentType(value: string | null): string {
@@ -51,36 +70,295 @@ function formatMomentType(value: string | null): string {
     .join(' ');
 }
 
+function getInitialPhotos(
+  photos: { storagePath: string; url: string }[],
+): SelectedImage[] {
+  return photos.map((photo) => ({
+    id: photo.storagePath,
+    uri: photo.url,
+    fileName: photo.storagePath.split('/').pop() ?? null,
+    storagePath: photo.storagePath,
+    uploadStatus: 'uploaded',
+    uploadError: null,
+  }));
+}
+
+function getUploadedPhotos(photos: SelectedImage[]) {
+  return photos
+    .filter(
+      (photo) =>
+        photo.uploadStatus === 'uploaded' && Boolean(photo.storagePath),
+    )
+    .slice(0, MAX_IMAGES_PER_UPLOAD)
+    .map((photo) => ({ storagePath: photo.storagePath! }));
+}
+
+function getPhotoKey(paths: { storagePath?: string | null }[]) {
+  return paths
+    .map((photo) => photo.storagePath?.trim())
+    .filter((path): path is string => Boolean(path))
+    .join('|');
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : 'Failed to save moment photos. Please try again.';
+}
+
+function getMomentPhotoValues(moment: {
+  title: string;
+  occurredOn: string;
+  category: string | null;
+  description: string | null;
+}) {
+  return {
+    title: moment.title,
+    occurredAt: parseOccurredAt(moment.occurredOn),
+    momentType: moment.category ?? '',
+    description: moment.description ?? '',
+  };
+}
+
 export default function MomentDetailScreen() {
-  const { width } = useWindowDimensions();
   const { activeGroup, isLoading: isLoadingGroups } = useActiveGroup();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
   const momentId = Array.isArray(rawId) ? rawId[0] : rawId;
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [photos, setPhotos] = useState<SelectedImage[]>([]);
+  const [hasLocalPhotoChanges, setHasLocalPhotoChanges] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const lastSubmittedPhotoKeyRef = useRef<string | null>(null);
+  const failedSavePhotoKeyRef = useRef<string | null>(null);
+  const deleteMomentMutation = useDeleteMomentMutation();
+  const updateMomentMutation = useUpdateMomentMutation();
+  const { startUpload } = useImageUpload({
+    bucket: 'moments',
+    setImages: setPhotos,
+  });
   const momentQuery = useMomentDetailQuery(momentId, activeGroup?.id);
   const moment = momentQuery.data;
-  const displayDate = moment ? formatOccurredOn(moment.occurredOn) : '';
+  const momentPhotoKey = getPhotoKey(moment?.photos ?? []);
+  const uploadedPhotoKey = getPhotoKey(getUploadedPhotos(photos));
+  const displayDate = moment?.occurredOn
+    ? formatOccurredOn(moment.occurredOn)
+    : '';
   const displayType = formatMomentType(moment?.category ?? null);
-  const bannerImages = moment?.photos?.length
-    ? moment.photos
-    : [FALLBACK_COVER_IMAGE];
-  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
-  const photoThumbs = moment?.photos?.slice(0, 3) ?? [];
+  const heroImageUrl = photos[0]?.uri ?? moment?.photos[0]?.url ?? null;
+  const heroImageSource = heroImageUrl
+    ? { uri: heroImageUrl }
+    : FALLBACK_COVER_IMAGE;
   const loadError =
     momentQuery.error instanceof Error
       ? momentQuery.error.message
       : momentQuery.error
         ? 'Could not load moment.'
         : null;
+  const hasDescription = Boolean(moment?.description?.trim());
+  const isDeleting = deleteMomentMutation.isPending;
+  const isSavingPhotos = updateMomentMutation.isPending;
+  const isMutatingMoment = isDeleting || isSavingPhotos;
+  const failedUploads = photos.filter(
+    (photo) => photo.uploadStatus === 'failed',
+  );
+  const hasFailedUploads = failedUploads.length > 0;
+  const hasTransientPhotos = photos.some(
+    (photo) => photo.uploadStatus !== 'uploaded',
+  );
+  const hasPendingUploads = photos.some(
+    (photo) =>
+      photo.uploadStatus === 'local' || photo.uploadStatus === 'uploading',
+  );
+  const retryUploadsDisabled =
+    isDeleting || isSavingPhotos || hasPendingUploads;
+  const retrySaveDisabled = isMutatingMoment || hasPendingUploads;
+  const deleteActionLabel = isDeleting
+    ? 'Deleting...'
+    : isSavingPhotos
+      ? 'Saving photos...'
+      : 'Delete moment';
 
-  function handleBannerScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    if (width <= 0) {
+  useEffect(() => {
+    if (!moment) {
       return;
     }
 
-    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / width);
-    setActiveBannerIndex(nextIndex);
+    const nextPhotos = getInitialPhotos(moment.photos);
+
+    if (hasLocalPhotoChanges) {
+      if (!hasTransientPhotos && uploadedPhotoKey === momentPhotoKey) {
+        setHasLocalPhotoChanges(false);
+        setSaveError(null);
+        failedSavePhotoKeyRef.current = null;
+        lastSubmittedPhotoKeyRef.current = momentPhotoKey;
+      }
+
+      return;
+    }
+
+    setPhotos((current) => {
+      const currentUploadedPhotoKey = getPhotoKey(getUploadedPhotos(current));
+      const hasCurrentTransientPhotos = current.some(
+        (photo) => photo.uploadStatus !== 'uploaded',
+      );
+
+      if (
+        hasCurrentTransientPhotos ||
+        (currentUploadedPhotoKey === momentPhotoKey &&
+          current.length === nextPhotos.length)
+      ) {
+        return current;
+      }
+
+      return nextPhotos;
+    });
+
+    lastSubmittedPhotoKeyRef.current = momentPhotoKey;
+  }, [
+    hasLocalPhotoChanges,
+    hasTransientPhotos,
+    moment,
+    momentPhotoKey,
+    uploadedPhotoKey,
+  ]);
+
+  const savePhotos = useCallback(
+    async (nextPhotos: SelectedImage[]) => {
+      if (!momentId || !activeGroup?.id || !moment) {
+        return;
+      }
+
+      const uploadedPhotos = getUploadedPhotos(nextPhotos);
+      const nextPhotoKey = getPhotoKey(uploadedPhotos);
+
+      if (nextPhotoKey === momentPhotoKey) {
+        return;
+      }
+
+      lastSubmittedPhotoKeyRef.current = nextPhotoKey;
+      failedSavePhotoKeyRef.current = null;
+      setSaveError(null);
+
+      try {
+        await updateMomentMutation.mutateAsync({
+          momentId,
+          groupId: activeGroup.id,
+          ...getMomentPhotoValues(moment),
+          photos: uploadedPhotos,
+        });
+      } catch (error) {
+        failedSavePhotoKeyRef.current = nextPhotoKey;
+        lastSubmittedPhotoKeyRef.current = null;
+        setSaveError(getErrorMessage(error));
+      }
+    },
+    [activeGroup?.id, moment, momentId, momentPhotoKey, updateMomentMutation],
+  );
+
+  useEffect(() => {
+    if (!hasLocalPhotoChanges || !moment) {
+      return;
+    }
+
+    if (hasPendingUploads || isSavingPhotos) {
+      return;
+    }
+
+    if (uploadedPhotoKey === momentPhotoKey) {
+      return;
+    }
+
+    if (
+      failedSavePhotoKeyRef.current === uploadedPhotoKey ||
+      lastSubmittedPhotoKeyRef.current === uploadedPhotoKey
+    ) {
+      return;
+    }
+
+    void savePhotos(photos);
+  }, [
+    hasLocalPhotoChanges,
+    hasPendingUploads,
+    isSavingPhotos,
+    moment,
+    momentPhotoKey,
+    photos,
+    savePhotos,
+    uploadedPhotoKey,
+  ]);
+
+  function handlePhotoChange(nextPhotos: SelectedImage[]) {
+    setSaveError(null);
+    setHasLocalPhotoChanges(true);
+    failedSavePhotoKeyRef.current = null;
+    setPhotos(nextPhotos);
   }
+
+  function handleRetryFailedUploads() {
+    setSaveError(null);
+    void startUpload(failedUploads);
+  }
+
+  function handleRetrySave() {
+    failedSavePhotoKeyRef.current = null;
+    void savePhotos(photos);
+  }
+
+  const removeMoment = async () => {
+    if (!momentId || !activeGroup?.id) {
+      return;
+    }
+
+    try {
+      await deleteMomentMutation.mutateAsync({
+        momentId,
+        groupId: activeGroup.id,
+      });
+      router.back();
+    } catch (error) {
+      Alert.alert(
+        'Could not delete moment',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    }
+  };
+
+  const handleEdit = () => {
+    setIsMenuOpen(false);
+
+    if (!momentId || isSavingPhotos) {
+      return;
+    }
+
+    router.push(`/moments/new?momentId=${encodeURIComponent(momentId)}`);
+  };
+
+  const handleDelete = () => {
+    setIsMenuOpen(false);
+
+    if (!momentId || !activeGroup?.id || isMutatingMoment) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete moment?',
+      'This moment and its photos will be removed permanently.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void removeMoment();
+          },
+        },
+      ],
+    );
+  };
 
   if (isLoadingGroups || momentQuery.isPending) {
     return (
@@ -104,71 +382,27 @@ export default function MomentDetailScreen() {
       </View>
     );
   }
-  const horizontalPadding = 16 * 2; // same as your container paddingHorizontal
-  const availableWidth = width - horizontalPadding;
-  const gap = (availableWidth - ITEM_WIDTH * COLUMNS) / COLUMNS;
 
   return (
     <View style={styles.screen}>
-      <ScrollView
-        bounces={false}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.bannerWrap}>
-          <ScrollView
-            horizontal
-            onMomentumScrollEnd={handleBannerScroll}
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            style={styles.bannerScroll}
-          >
-            {bannerImages.map((bannerImage, index) => (
-              <Image
-                contentFit="cover"
-                key={
-                  typeof bannerImage === 'string'
-                    ? bannerImage
-                    : `fallback-${index}`
-                }
-                source={
-                  typeof bannerImage === 'string'
-                    ? { uri: bannerImage }
-                    : bannerImage
-                }
-                style={[styles.bannerImage, { width }]}
-              />
-            ))}
-          </ScrollView>
-          <View style={styles.bannerOverlay} />
+      <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+        <View style={styles.heroWrap}>
+          <Image
+            contentFit="cover"
+            source={heroImageSource}
+            style={styles.heroImage}
+          />
+          <View style={styles.heroOverlay} />
 
           <View style={styles.typePill}>
             <Text style={styles.typePillText}>{displayType}</Text>
           </View>
-
-          {bannerImages.length > 1 ? (
-            <View style={styles.bannerDots}>
-              {bannerImages.map((bannerImage, index) => (
-                <View
-                  key={
-                    typeof bannerImage === 'string'
-                      ? `dot-${bannerImage}`
-                      : 'dot-fallback-cover'
-                  }
-                  style={[
-                    styles.bannerDot,
-                    index === activeBannerIndex ? styles.bannerDotActive : null,
-                  ]}
-                />
-              ))}
-            </View>
-          ) : null}
         </View>
 
         <View style={styles.bodyCard}>
           <Text style={styles.title}>{moment.title}</Text>
 
-          <View style={styles.dateRow}>
+          <View style={styles.metaRow}>
             <CalendarDays color={sectionColors.moments} size={14} />
             <Text style={styles.dateText}>{displayDate}</Text>
           </View>
@@ -177,56 +411,75 @@ export default function MomentDetailScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Memory</Text>
-            <Text style={styles.sectionBody}>{moment.description ?? ''}</Text>
+            <Text style={styles.sectionBody}>
+              {hasDescription ? moment.description : 'No memory added'}
+            </Text>
           </View>
 
           <Divider color={sectionColors.moments} />
 
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Photos</Text>
-            <View style={[styles.photosRow, { gap: gap }]}>
-              {Array.from({ length: 6 }).map((_, index) => {
-                const photo = photoThumbs[index];
+            <AddImageField
+              color={sectionColors.moments}
+              disabled={isMutatingMoment}
+              maxImages={MAX_IMAGES_PER_UPLOAD}
+              onChange={handlePhotoChange}
+              onRequestUpload={startUpload}
+              value={photos}
+            />
 
-                if (!photo) {
-                  return (
-                    <View
-                      key={`placeholder-${index}`}
-                      style={styles.photoPlaceholder}
-                    >
-                      <Text style={styles.photoPlaceholderText}>+</Text>
-                    </View>
-                  );
-                }
+            {hasFailedUploads ? (
+              <Pressable
+                accessibilityHint="Retries failed photo uploads"
+                accessibilityLabel="Retry failed uploads"
+                accessibilityRole="button"
+                disabled={retryUploadsDisabled}
+                onPress={handleRetryFailedUploads}
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed ? styles.retryButtonPressed : null,
+                  retryUploadsDisabled ? styles.retryButtonDisabled : null,
+                ]}
+              >
+                <Text style={styles.retryButtonText}>Retry failed uploads</Text>
+              </Pressable>
+            ) : null}
 
-                return (
-                  <View
-                    key={photo}
-                    style={[
-                      {
-                        display: 'flex',
-                        flex: 3,
-                        gap: gap,
-                        marginHorizontal: 'auto',
-                        flexDirection: 'row',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        width: '100%',
-                      },
-                    ]}
-                  >
-                    <Image contentFit="cover" source={{ uri: photo }} />
-                  </View>
-                );
-              })}
-            </View>
+            {saveError ? (
+              <>
+                <Text style={styles.fieldErrorText}>{saveError}</Text>
+                <Pressable
+                  accessibilityHint="Retries saving the current moment photos"
+                  accessibilityLabel="Retry saving photos"
+                  accessibilityRole="button"
+                  disabled={retrySaveDisabled}
+                  onPress={handleRetrySave}
+                  style={({ pressed }) => [
+                    styles.retryButton,
+                    pressed ? styles.retryButtonPressed : null,
+                    retrySaveDisabled ? styles.retryButtonDisabled : null,
+                  ]}
+                >
+                  <Text style={styles.retryButtonText}>
+                    Retry saving photos
+                  </Text>
+                </Pressable>
+              </>
+            ) : null}
+
+            {isSavingPhotos ? (
+              <View style={styles.submittingRow}>
+                <ActivityIndicator color={sectionColors.moments} />
+                <Text style={styles.submittingText}>Saving photos...</Text>
+              </View>
+            ) : null}
           </View>
         </View>
       </ScrollView>
 
       <View pointerEvents="box-none" style={styles.topButtons}>
         <Pressable
-          accessibilityHint="Returns to moments list"
+          accessibilityHint="Returns to the moments list"
           accessibilityLabel="Go back"
           accessibilityRole="button"
           onPress={() => router.back()}
@@ -234,7 +487,65 @@ export default function MomentDetailScreen() {
         >
           <ChevronLeft color={baseColors.text} size={22} />
         </Pressable>
+
+        <Pressable
+          accessibilityHint="Opens moment actions"
+          accessibilityLabel="More options"
+          accessibilityRole="button"
+          disabled={isMutatingMoment}
+          onPress={() => setIsMenuOpen(true)}
+          style={[
+            styles.menuButton,
+            isMutatingMoment ? styles.menuButtonDisabled : null,
+          ]}
+        >
+          <Ellipsis color={baseColors.text} size={22} />
+        </Pressable>
       </View>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setIsMenuOpen(false)}
+        transparent
+        visible={isMenuOpen}
+      >
+        <View style={styles.menuOverlay}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setIsMenuOpen(false)}
+            style={styles.menuBackdrop}
+          />
+          <View style={styles.menuPanel}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleEdit}
+              style={({ pressed }) => [
+                styles.menuAction,
+                pressed ? styles.menuActionPressed : null,
+              ]}
+            >
+              <Text style={styles.menuActionText}>Edit moment</Text>
+            </Pressable>
+
+            <View style={styles.menuDivider} />
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={isMutatingMoment}
+              onPress={handleDelete}
+              style={({ pressed }) => [
+                styles.menuAction,
+                pressed ? styles.menuActionPressed : null,
+                isMutatingMoment ? styles.menuActionDisabled : null,
+              ]}
+            >
+              <Text style={styles.menuActionDangerText}>
+                {deleteActionLabel}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -251,43 +562,51 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: space.xl,
   },
-  content: {
-    paddingBottom: space.xxl,
-  },
-  bannerWrap: {
+  heroWrap: {
     height: 320,
     position: 'relative',
   },
-  bannerScroll: {
-    height: '100%',
+  heroImage: {
+    height: 320,
     width: '100%',
   },
-  bannerImage: {
-    height: '100%',
-  },
-  bannerOverlay: {
+  heroOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.25)',
   },
   topButtons: {
     left: 0,
     position: 'absolute',
     right: 0,
-    top: 40,
+    top: 60,
     zIndex: 1,
   },
   backButton: {
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: radius.full,
     borderWidth: 1,
     height: 40,
     justifyContent: 'center',
-    left: space.lg - 6,
+    left: space.lg,
     position: 'absolute',
-    top: space.lg,
     width: 40,
+  },
+  menuButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: space.lg,
+    width: 40,
+  },
+  menuButtonDisabled: {
+    opacity: 0.45,
   },
   typePill: {
     alignItems: 'center',
@@ -306,33 +625,15 @@ const styles = StyleSheet.create({
     fontSize: textTheme.size.md,
     lineHeight: textTheme.lineHeight.md,
   },
-  bannerDots: {
-    alignItems: 'center',
-    bottom: space.sm,
-    flexDirection: 'row',
-    gap: space.xs,
-    position: 'absolute',
-    right: space.lg,
-  },
-  bannerDot: {
-    backgroundColor: 'rgba(245, 240, 236, 0.45)',
-    borderRadius: radius.full,
-    height: 6,
-    width: 6,
-  },
-  bannerDotActive: {
-    backgroundColor: sectionColors.moments,
-    width: 16,
-  },
   bodyCard: {
     backgroundColor: baseColors.bg,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     gap: space.lg + space.xs,
     marginTop: -space.lg,
+    paddingBottom: space.xl,
     paddingHorizontal: space.lg,
     paddingTop: space.xl,
-    paddingBottom: space.xl,
   },
   title: {
     color: baseColors.text,
@@ -340,10 +641,10 @@ const styles = StyleSheet.create({
     fontSize: textTheme.size.xxl,
     lineHeight: textTheme.lineHeight.xl,
   },
-  dateRow: {
+  metaRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: space.xs + 2,
+    gap: space.sm,
   },
   dateText: {
     color: sectionColors.moments,
@@ -368,39 +669,79 @@ const styles = StyleSheet.create({
     fontSize: textTheme.size.sm,
     lineHeight: textTheme.lineHeight.sm,
   },
-  photosRow: {
-    flexDirection: 'row',
-    flex: 3,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+  retryButton: {
+    alignSelf: 'flex-start',
+    borderColor: sectionColors.moments,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs,
   },
-  photoThumbWrap: {
-    borderRadius: 14,
-    height: 111,
-    overflow: 'hidden',
-    width: 111,
+  retryButtonPressed: {
+    opacity: 0.82,
   },
-  photoThumb: {
-    width: '100%',
-    height: '100%',
+  retryButtonDisabled: {
+    opacity: 0.45,
   },
-
-  photoPlaceholder: {
+  retryButtonText: {
+    color: sectionColors.moments,
+    fontFamily: textTheme.family.semiBold,
+    fontSize: textTheme.size.xs,
+    lineHeight: textTheme.lineHeight.xs,
+  },
+  submittingRow: {
     alignItems: 'center',
-    backgroundColor: baseColors.card,
-    borderColor: 'rgba(107,101,96,0.27)',
-    borderRadius: 14,
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    height: 111,
-    justifyContent: 'center',
-    width: 111,
+    flexDirection: 'row',
+    gap: space.sm,
   },
-  photoPlaceholderText: {
-    color: baseColors.textMuted,
-    fontFamily: textTheme.family.regular,
+  submittingText: {
+    color: baseColors.textSoft,
+    fontFamily: textTheme.family.medium,
     fontSize: textTheme.size.sm,
-    lineHeight: 33,
+    lineHeight: textTheme.lineHeight.sm,
+  },
+  menuOverlay: {
+    flex: 1,
+  },
+  menuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  menuPanel: {
+    backgroundColor: baseColors.bg,
+    borderColor: 'rgba(107, 101, 96, 0.16)',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    minWidth: 168,
+    overflow: 'hidden',
+    position: 'absolute',
+    right: space.lg,
+    top: space.lg + 84,
+  },
+  menuAction: {
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+  },
+  menuActionPressed: {
+    opacity: 0.82,
+  },
+  menuActionDisabled: {
+    opacity: 0.45,
+  },
+  menuActionText: {
+    color: baseColors.text,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
+  },
+  menuActionDangerText: {
+    color: baseColors.textError,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
+  },
+  menuDivider: {
+    backgroundColor: 'rgba(107, 101, 96, 0.12)',
+    height: 1,
   },
   errorText: {
     color: baseColors.textError,
@@ -409,10 +750,14 @@ const styles = StyleSheet.create({
     lineHeight: textTheme.lineHeight.sm,
     textAlign: 'center',
   },
+  fieldErrorText: {
+    color: baseColors.textError,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.xs,
+    lineHeight: textTheme.lineHeight.xs,
+  },
   backTextButton: {
-    marginTop: space.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
+    marginTop: space.lg,
   },
   backText: {
     color: sectionColors.moments,
