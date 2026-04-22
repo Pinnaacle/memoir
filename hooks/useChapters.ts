@@ -3,6 +3,7 @@ import {
   deleteChapter,
   getChapterById,
   listChaptersForGroup,
+  updateChapter,
 } from '@/services/chapters';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -45,6 +46,19 @@ export function useCreateChapterMutation() {
 
   return useMutation({
     mutationFn: createChapter,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: chapterKeys.all,
+      });
+    },
+  });
+}
+
+export function useUpdateChapterMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateChapter,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: chapterKeys.all,

@@ -24,6 +24,10 @@ export type CreateChapterInput = {
   items: ChapterItemInput[];
 };
 
+export type UpdateChapterInput = CreateChapterInput & {
+  chapterId: string;
+};
+
 export type ChapterListItem = {
   id: string;
   title: string;
@@ -443,6 +447,81 @@ export async function createChapter(
   }
 
   return insertedChapter.id;
+}
+
+export async function updateChapter(
+  input: UpdateChapterInput,
+): Promise<string> {
+  await requireCurrentUserId('You must be signed in to edit a chapter.');
+
+  if (!input.groupId) {
+    throw new Error('A group must be selected before editing a chapter.');
+  }
+
+  if (!input.chapterId) {
+    throw new Error('Chapter not found.');
+  }
+
+  const description = input.description.trim();
+
+  const { data: updatedChapter, error: chapterError } = await supabase
+    .from('chapters')
+    .update({
+      title: input.title.trim(),
+      chapter_type: input.chapterType.trim() || null,
+      description: description.length > 0 ? description : null,
+      occurred_on: toLocalDateString(input.occurredAt),
+    })
+    .eq('id', input.chapterId)
+    .eq('group_id', input.groupId)
+    .select('id')
+    .single();
+
+  if (chapterError) {
+    throw new Error(chapterError.message);
+  }
+
+  if (!updatedChapter?.id) {
+    throw new Error('Could not update chapter.');
+  }
+
+  const { error: deleteItemsError } = await supabase
+    .from('chapter_items')
+    .delete()
+    .eq('group_id', input.groupId)
+    .eq('chapter_id', input.chapterId);
+
+  if (deleteItemsError) {
+    throw new Error(deleteItemsError.message);
+  }
+
+  if (input.items.length === 0) {
+    return updatedChapter.id;
+  }
+
+  const seen = new Set<string>();
+  const dedupedItems = input.items.filter((item) => {
+    const key = makeRefKey(item.kind, item.id);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const { error: itemsError } = await supabase.from('chapter_items').insert(
+    dedupedItems.map((item, index) => ({
+      group_id: input.groupId,
+      chapter_id: input.chapterId,
+      ref_type: item.kind,
+      ref_id: item.id,
+      sort_order: index,
+    })),
+  );
+
+  if (itemsError) {
+    throw new Error(itemsError.message);
+  }
+
+  return updatedChapter.id;
 }
 
 export async function deleteChapter(chapterId: string, groupId: string) {
