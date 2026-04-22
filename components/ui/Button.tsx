@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     color: baseColors.bg,
   },
   pressed: {
-    opacity: 0.80,
+    opacity: 0.8,
   },
   disabled: {
     opacity: 0.45,
