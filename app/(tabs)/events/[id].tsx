@@ -1,7 +1,17 @@
+import {
+  AddImageField,
+  type SelectedImage,
+} from '@/components/ui/AddImageField';
 import Divider from '@/components/ui/Divider';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
-import { useDeleteEventMutation, useEventDetailQuery } from '@/hooks/useEvents';
+import {
+  useDeleteEventMutation,
+  useEventDetailQuery,
+  useUpdateEventMutation,
+} from '@/hooks/useEvents';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
@@ -14,7 +24,7 @@ import {
   Ellipsis,
   MapPin,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -22,12 +32,8 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
   View,
 } from 'react-native';
-
-const ITEM_WIDTH = 110;
-const COLUMNS = 3;
 
 const FALLBACK_COVER_IMAGE = require('../../../assets/images/fallbackImage.png');
 
@@ -45,24 +51,82 @@ function formatOccurredOn(dateValue: string): string {
   });
 }
 
+function parseOccurredAt(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number);
+
+  if ([year, month, day].every((part) => Number.isFinite(part))) {
+    return new Date(year, month - 1, day);
+  }
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function getInitialPhotos(
+  photos: { storagePath: string; url: string }[],
+): SelectedImage[] {
+  return photos.map((photo) => ({
+    id: photo.storagePath,
+    uri: photo.url,
+    fileName: photo.storagePath.split('/').pop() ?? null,
+    storagePath: photo.storagePath,
+    uploadStatus: 'uploaded',
+    uploadError: null,
+  }));
+}
+
+function getUploadedPhotos(photos: SelectedImage[]) {
+  return photos
+    .filter(
+      (photo) =>
+        photo.uploadStatus === 'uploaded' && Boolean(photo.storagePath),
+    )
+    .slice(0, MAX_IMAGES_PER_UPLOAD)
+    .map((photo) => ({ storagePath: photo.storagePath! }));
+}
+
+function getPhotoKey(paths: { storagePath?: string | null }[]) {
+  return paths
+    .map((photo) => photo.storagePath?.trim())
+    .filter((path): path is string => Boolean(path))
+    .join('|');
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : 'Failed to save event photos. Please try again.';
+}
+
 export default function EventDetailScreen() {
-  const { width } = useWindowDimensions();
   const { activeGroup, isLoading: isLoadingGroups } = useActiveGroup();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
   const eventId = Array.isArray(rawId) ? rawId[0] : rawId;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [photos, setPhotos] = useState<SelectedImage[]>([]);
+  const [hasLocalPhotoChanges, setHasLocalPhotoChanges] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const lastSubmittedPhotoKeyRef = useRef<string | null>(null);
+  const failedSavePhotoKeyRef = useRef<string | null>(null);
   const deleteEventMutation = useDeleteEventMutation();
+  const updateEventMutation = useUpdateEventMutation();
+  const { startUpload } = useImageUpload({
+    bucket: 'events',
+    setImages: setPhotos,
+  });
   const eventQuery = useEventDetailQuery(eventId, activeGroup?.id);
   const event = eventQuery.data;
+  const eventPhotoKey = getPhotoKey(event?.photos ?? []);
+  const uploadedPhotoKey = getPhotoKey(getUploadedPhotos(photos));
   const displayDate = event?.occurredOn
     ? formatOccurredOn(event.occurredOn)
     : '';
-  const heroImageUrl = event?.photos[0]?.url ?? null;
+  const heroImageUrl = photos[0]?.uri ?? event?.photos[0]?.url ?? null;
   const heroImageSource = heroImageUrl
     ? { uri: heroImageUrl }
     : FALLBACK_COVER_IMAGE;
-  const photoThumbs = event?.photos.slice(0, 3) ?? [];
   const loadError =
     eventQuery.error instanceof Error
       ? eventQuery.error.message
@@ -71,6 +135,135 @@ export default function EventDetailScreen() {
         : null;
   const hasNotes = Boolean(event?.notes?.trim());
   const isDeleting = deleteEventMutation.isPending;
+  const isSavingPhotos = updateEventMutation.isPending;
+  const isMutatingEvent = isDeleting || isSavingPhotos;
+  const failedUploads = photos.filter(
+    (photo) => photo.uploadStatus === 'failed',
+  );
+  const hasFailedUploads = failedUploads.length > 0;
+  const hasPendingUploads = photos.some(
+    (photo) =>
+      photo.uploadStatus === 'local' || photo.uploadStatus === 'uploading',
+  );
+  const retryUploadsDisabled = isDeleting || isSavingPhotos || hasPendingUploads;
+
+  useEffect(() => {
+    if (!event) {
+      return;
+    }
+
+    const nextPhotos = getInitialPhotos(event.photos);
+
+    if (hasLocalPhotoChanges) {
+      const hasTransientPhotos = photos.some(
+        (photo) => photo.uploadStatus !== 'uploaded',
+      );
+
+      if (!hasTransientPhotos && uploadedPhotoKey === eventPhotoKey) {
+        setHasLocalPhotoChanges(false);
+        setSaveError(null);
+        failedSavePhotoKeyRef.current = null;
+        lastSubmittedPhotoKeyRef.current = eventPhotoKey;
+      }
+
+      return;
+    }
+
+    setPhotos((current) => {
+      const currentPhotoKey = getPhotoKey(getUploadedPhotos(current));
+      const hasTransientPhotos = current.some(
+        (photo) => photo.uploadStatus !== 'uploaded',
+      );
+
+      if (
+        hasTransientPhotos ||
+        (currentPhotoKey === eventPhotoKey &&
+          current.length === nextPhotos.length)
+      ) {
+        return current;
+      }
+
+      return nextPhotos;
+    });
+
+    lastSubmittedPhotoKeyRef.current = eventPhotoKey;
+  }, [event, eventPhotoKey, hasLocalPhotoChanges, photos, uploadedPhotoKey]);
+
+  const savePhotos = useCallback(
+    async (nextPhotos: SelectedImage[]) => {
+      if (!eventId || !activeGroup?.id || !event) {
+        return;
+      }
+
+      const uploadedPhotos = getUploadedPhotos(nextPhotos);
+      const nextPhotoKey = getPhotoKey(uploadedPhotos);
+
+      if (nextPhotoKey === eventPhotoKey) {
+        return;
+      }
+
+      lastSubmittedPhotoKeyRef.current = nextPhotoKey;
+      failedSavePhotoKeyRef.current = null;
+      setSaveError(null);
+
+      try {
+        await updateEventMutation.mutateAsync({
+          eventId,
+          groupId: activeGroup.id,
+          title: event.title,
+          occurredAt: parseOccurredAt(event.occurredOn),
+          location: event.locationText ?? '',
+          mood: event.mood ?? 'Romantic',
+          notes: event.notes ?? '',
+          photos: uploadedPhotos,
+        });
+      } catch (error) {
+        failedSavePhotoKeyRef.current = nextPhotoKey;
+        lastSubmittedPhotoKeyRef.current = null;
+        setSaveError(getErrorMessage(error));
+      }
+    },
+    [activeGroup?.id, event, eventId, eventPhotoKey, updateEventMutation],
+  );
+
+  useEffect(() => {
+    if (!hasLocalPhotoChanges || !event) {
+      return;
+    }
+
+    if (hasPendingUploads || isSavingPhotos) {
+      return;
+    }
+
+    if (uploadedPhotoKey === eventPhotoKey) {
+      return;
+    }
+
+    if (
+      failedSavePhotoKeyRef.current === uploadedPhotoKey ||
+      lastSubmittedPhotoKeyRef.current === uploadedPhotoKey
+    ) {
+      return;
+    }
+
+    void savePhotos(photos);
+  }, [
+    event,
+    eventPhotoKey,
+    hasLocalPhotoChanges,
+    hasPendingUploads,
+    isSavingPhotos,
+    photos,
+    savePhotos,
+    uploadedPhotoKey,
+  ]);
+
+  function handlePhotoChange(nextPhotos: SelectedImage[]) {
+    setSaveError(null);
+    setHasLocalPhotoChanges(true);
+    failedSavePhotoKeyRef.current = null;
+    setPhotos(nextPhotos);
+  }
 
   const removeEvent = async () => {
     if (!eventId || !activeGroup?.id) {
@@ -94,7 +287,7 @@ export default function EventDetailScreen() {
   const handleEdit = () => {
     setIsMenuOpen(false);
 
-    if (!eventId) {
+    if (!eventId || isSavingPhotos) {
       return;
     }
 
@@ -104,7 +297,7 @@ export default function EventDetailScreen() {
   const handleDelete = () => {
     setIsMenuOpen(false);
 
-    if (!eventId || !activeGroup?.id || isDeleting) {
+    if (!eventId || !activeGroup?.id || isMutatingEvent) {
       return;
     }
 
@@ -150,10 +343,6 @@ export default function EventDetailScreen() {
     );
   }
 
-  const horizontalPadding = 16 * 2; // same as your container paddingHorizontal
-  const availableWidth = width - horizontalPadding;
-  const gap = (availableWidth - ITEM_WIDTH * COLUMNS) / COLUMNS;
-
   return (
     <View style={styles.screen}>
       <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
@@ -184,14 +373,14 @@ export default function EventDetailScreen() {
             accessibilityHint="Opens event actions"
             accessibilityLabel="More options"
             accessibilityRole="button"
-            disabled={isDeleting}
+            disabled={isMutatingEvent}
             onPress={() => setIsMenuOpen(true)}
             style={[
               styles.menuButton,
               {
                 top: space.lg,
               },
-              isDeleting ? styles.menuButtonDisabled : null,
+              isMutatingEvent ? styles.menuButtonDisabled : null,
             ]}
           >
             <Ellipsis color={baseColors.text} size={22} />
@@ -244,33 +433,68 @@ export default function EventDetailScreen() {
           <Divider color={sectionColors.events} />
 
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Photos</Text>
-            <View style={[styles.photosRow, { gap: gap }]}>
-              {Array.from({ length: 6 }).map((_, index) => {
-                const photo = photoThumbs[index];
+            <AddImageField
+              color={sectionColors.events}
+              disabled={isMutatingEvent}
+              maxImages={MAX_IMAGES_PER_UPLOAD}
+              onChange={handlePhotoChange}
+              onRequestUpload={(newPhotos) => {
+                void startUpload(newPhotos);
+              }}
+              value={photos}
+            />
 
-                if (!photo) {
-                  return (
-                    <View
-                      key={`placeholder-${index}`}
-                      style={styles.photoPlaceholder}
-                    >
-                      <Text style={styles.photoPlaceholderText}>+</Text>
-                    </View>
-                  );
-                }
+            {hasFailedUploads ? (
+              <Pressable
+                  accessibilityHint="Retries failed photo uploads"
+                  accessibilityLabel="Retry failed uploads"
+                  accessibilityRole="button"
+                  disabled={retryUploadsDisabled}
+                onPress={() => {
+                  setSaveError(null);
+                  void startUpload(failedUploads);
+                }}
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed ? styles.retryButtonPressed : null,
+                  retryUploadsDisabled ? styles.retryButtonDisabled : null,
+                ]}
+              >
+                <Text style={styles.retryButtonText}>Retry failed uploads</Text>
+              </Pressable>
+            ) : null}
 
-                return (
-                  <View key={photo.storagePath} style={styles.photoThumbWrap}>
-                    <Image
-                      contentFit="cover"
-                      source={{ uri: photo.url }}
-                      style={styles.photoThumb}
-                    />
-                  </View>
-                );
-              })}
-            </View>
+            {saveError ? (
+              <>
+                <Text style={styles.fieldErrorText}>{saveError}</Text>
+                <Pressable
+                  accessibilityHint="Retries saving the current event photos"
+                  accessibilityLabel="Retry saving photos"
+                  accessibilityRole="button"
+                  disabled={isMutatingEvent || hasPendingUploads}
+                  onPress={() => {
+                    failedSavePhotoKeyRef.current = null;
+                    void savePhotos(photos);
+                  }}
+                  style={({ pressed }) => [
+                    styles.retryButton,
+                    pressed ? styles.retryButtonPressed : null,
+                    isMutatingEvent || hasPendingUploads
+                      ? styles.retryButtonDisabled
+                      : null,
+                  ]}
+                >
+                  <Text style={styles.retryButtonText}>Retry saving photos</Text>
+                </Pressable>
+              </>
+            ) : null}
+
+            {isSavingPhotos ? (
+              <View style={styles.submittingRow}>
+                <ActivityIndicator color={sectionColors.events} />
+                <Text style={styles.submittingText}>Saving photos...</Text>
+              </View>
+            ) : null}
           </View>
         </View>
       </ScrollView>
@@ -303,16 +527,20 @@ export default function EventDetailScreen() {
 
             <Pressable
               accessibilityRole="button"
-              disabled={isDeleting}
+              disabled={isMutatingEvent}
               onPress={handleDelete}
               style={({ pressed }) => [
                 styles.menuAction,
                 pressed ? styles.menuActionPressed : null,
-                isDeleting ? styles.menuActionDisabled : null,
+                isMutatingEvent ? styles.menuActionDisabled : null,
               ]}
             >
               <Text style={styles.menuActionDangerText}>
-                {isDeleting ? 'Deleting...' : 'Delete event'}
+                {isDeleting
+                  ? 'Deleting...'
+                  : isSavingPhotos
+                    ? 'Saving photos...'
+                    : 'Delete event'}
               </Text>
             </Pressable>
           </View>
@@ -443,39 +671,36 @@ const styles = StyleSheet.create({
     fontSize: textTheme.size.sm,
     lineHeight: textTheme.lineHeight.sm,
   },
-  photosRow: {
-    flexDirection: 'row',
-    flex: 3,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+  retryButton: {
+    alignSelf: 'flex-start',
+    borderColor: sectionColors.events,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs,
   },
-  photoThumbWrap: {
-    borderRadius: 14,
-    height: 111,
-    overflow: 'hidden',
-    width: 111,
+  retryButtonPressed: {
+    opacity: 0.82,
   },
-  photoThumb: {
-    width: '100%',
-    height: '100%',
+  retryButtonDisabled: {
+    opacity: 0.45,
   },
-
-  photoPlaceholder: {
-    width: 111,
-    height: 111,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(107, 101, 96, 0.27)',
-    backgroundColor: baseColors.card,
+  retryButtonText: {
+    color: sectionColors.events,
+    fontFamily: textTheme.family.semiBold,
+    fontSize: textTheme.size.xs,
+    lineHeight: textTheme.lineHeight.xs,
+  },
+  submittingRow: {
     alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: space.sm,
   },
-  photoPlaceholderText: {
-    color: baseColors.textMuted,
-    fontFamily: textTheme.family.regular,
+  submittingText: {
+    color: baseColors.textSoft,
+    fontFamily: textTheme.family.medium,
     fontSize: textTheme.size.sm,
-    lineHeight: 33,
+    lineHeight: textTheme.lineHeight.sm,
   },
   menuOverlay: {
     flex: 1,
@@ -526,6 +751,12 @@ const styles = StyleSheet.create({
     fontSize: textTheme.size.sm,
     lineHeight: textTheme.lineHeight.sm,
     textAlign: 'center',
+  },
+  fieldErrorText: {
+    color: baseColors.textError,
+    fontFamily: textTheme.family.medium,
+    fontSize: textTheme.size.xs,
+    lineHeight: textTheme.lineHeight.xs,
   },
   backTextButton: {
     marginTop: space.lg,
