@@ -5,7 +5,7 @@ import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { differenceInDays, parse } from 'date-fns';
 import { Image } from 'expo-image';
-import { Heart, House, MapPin, PlaneIcon } from 'lucide-react-native';
+import { BookOpen, Heart, House, MapPin, PlaneIcon } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 interface CardProps extends React.ComponentProps<typeof View> {
@@ -17,7 +17,7 @@ interface CardProps extends React.ComponentProps<typeof View> {
   location?: string;
   description?: string;
   type?: string;
-  icon?: 'heart' | 'plain' | 'house';
+  icon?: 'heart' | 'plain' | 'house' | 'book';
   color?: string;
 }
 
@@ -173,6 +173,13 @@ const DetailedCard = ({
         )}
         {icon === 'house' && (
           <House
+            color={baseColors.text}
+            size={24}
+            style={[{ paddingHorizontal: space.lg }]}
+          />
+        )}
+        {icon === 'book' && (
+          <BookOpen
             color={baseColors.text}
             size={24}
             style={[{ paddingHorizontal: space.lg }]}
