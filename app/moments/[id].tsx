@@ -24,7 +24,7 @@ import {
 const ITEM_WIDTH = 110;
 const COLUMNS = 3;
 
-const FALLBACK_COVER_IMAGE = require('../../../assets/images/fallbackImage.png');
+const FALLBACK_COVER_IMAGE = require('../../assets/images/fallbackImage.png');
 
 function formatOccurredOn(dateValue: string): string {
   const date = new Date(dateValue);
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     left: 0,
     position: 'absolute',
     right: 0,
-    top: 0,
+    top: 40,
     zIndex: 1,
   },
   backButton: {
