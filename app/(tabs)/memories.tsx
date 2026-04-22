@@ -1,17 +1,20 @@
 import Button from '@/components/ui/Button';
 import Image from '@/components/ui/Image';
+import { Text } from '@/components/ui/Text';
+import { useActiveGroup } from '@/hooks/useActiveGroup';
+import { useMemoryWallQuery } from '@/hooks/useMemoryWall';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text } from '@/theme/type';
 import { Image as ExpoImage } from 'expo-image';
-import { navigate } from 'expo-router/build/global-state/routing';
-import { useState } from 'react';
+import { Link, type Href } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Modal as ExpoModal,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -22,10 +25,14 @@ const COLUMNS = 2;
 type MemoryType = 'moment' | 'event' | 'chapter';
 
 interface MemoryItem {
-  id: number;
+  id: string;
+  sourceId: string;
+  eventId?: string;
+  momentId?: string;
   title: string;
   date: string;
-  imageUrl: string;
+  imageUrl: string | number;
+  description: string;
   type: MemoryType;
 }
 
@@ -34,81 +41,92 @@ const MEMORY_TYPE_COLORS: Record<MemoryType, string> = {
   event: sectionColors.events,
   chapter: sectionColors.chapters,
 };
+
+const FALLBACK_COVER_IMAGE = require('@/assets/images/fallbackImage.png');
+
+function formatOccurredOn(dateValue: string): string {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function shuffleItems<T>(items: T[]): T[] {
+  const copy = [...items];
+
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[randomIndex]] = [copy[randomIndex], copy[index]];
+  }
+
+  return copy;
+}
+
+function resolveMemoryHref(item: {
+  type?: MemoryType | null;
+  sourceId?: string;
+  eventId?: string;
+  momentId?: string;
+}): Href | null {
+  if (item.eventId) {
+    return `/events/${item.eventId}` as Href;
+  }
+
+  if (item.momentId) {
+    return `/moments/${item.momentId}` as Href;
+  }
+
+  if (!item.sourceId) {
+    return null;
+  }
+
+  if (item.type === 'event') {
+    return `/events/${item.sourceId}` as Href;
+  }
+
+  if (item.type === 'moment') {
+    return `/moments/${item.sourceId}` as Href;
+  }
+
+  return null;
+}
+
 export default function MemoriesScreen() {
-  const memories: MemoryItem[] = [
-    {
-      id: 1,
-      title: 'Beach Vacation',
-      date: 'June 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
-      type: 'moment',
-    },
-    {
-      id: 2,
-      title: 'Mountain Hike',
-      date: 'September 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=800&q=80',
-      type: 'event',
-    },
-    {
-      id: 3,
-      title: 'City Exploration',
-      date: 'December 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=800&q=80',
-      type: 'chapter',
-    },
-    {
-      id: 4,
-      title: 'Forest Camping',
-      date: 'April 2024',
-      imageUrl:
-        'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80',
-      type: 'moment',
-    },
-    {
-      id: 5,
-      title: 'Desert Road Trip',
-      date: 'August 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
-      type: 'event',
-    },
-    {
-      id: 6,
-      title: 'Snowy Getaway',
-      date: 'January 2024',
-      imageUrl:
-        'https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=800&q=80',
-      type: 'chapter',
-    },
-    {
-      id: 7,
-      title: 'Lakeside Retreat',
-      date: 'May 2024',
-      imageUrl:
-        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
-      type: 'moment',
-    },
-    {
-      id: 8,
-      title: 'Countryside Picnic',
-      date: 'July 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=800&q=80',
-      type: 'event',
-    },
-    {
-      id: 9,
-      title: 'Urban Art Tour',
-      date: 'November 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=800&q=80',
-      type: 'chapter',
-    },
-  ];
+  const {
+    activeGroup,
+    errorMessage: groupError,
+    isLoading: isLoadingGroups,
+  } = useActiveGroup();
+  const memoryWallQuery = useMemoryWallQuery(activeGroup?.id);
+  const memories: MemoryItem[] = useMemo(() => {
+    const mappedItems = (memoryWallQuery.data ?? []).map((item) => ({
+      id: item.id,
+      sourceId: item.sourceId,
+      eventId: item.eventId,
+      momentId: item.momentId,
+      title: item.title,
+      date: formatOccurredOn(item.occurredOn),
+      imageUrl: item.imageUrl ?? FALLBACK_COVER_IMAGE,
+      description: item.description,
+      type: item.type,
+    }));
+
+    return shuffleItems(mappedItems);
+  }, [memoryWallQuery.data]);
+  const loadError =
+    groupError ??
+    (memoryWallQuery.error instanceof Error
+      ? memoryWallQuery.error.message
+      : memoryWallQuery.error
+        ? 'Failed to load memories.'
+        : null);
 
   const { width } = useWindowDimensions();
   const horizontalPadding = space.lg * 2; // same as your container paddingHorizontal
@@ -129,6 +147,22 @@ export default function MemoriesScreen() {
 
       <View style={styles.container}>
         <Text style={styles.title}>✦ {memories.length} memories ✦</Text>
+
+        {isLoadingGroups || memoryWallQuery.isPending ? (
+          <ActivityIndicator color={sectionColors.memories} />
+        ) : null}
+
+        {!isLoadingGroups && !memoryWallQuery.isPending && loadError ? (
+          <Text style={styles.errorText}>{loadError}</Text>
+        ) : null}
+
+        {!isLoadingGroups &&
+        !memoryWallQuery.isPending &&
+        !loadError &&
+        memories.length === 0 ? (
+          <Text style={styles.emptyText}>No memories yet in this space.</Text>
+        ) : null}
+
         <View
           style={[
             styles.memoriesContainer,
@@ -168,6 +202,9 @@ function Modal({
   setModalVisible: (visible: boolean) => void;
   selectedMemory: MemoryItem | null;
 }) {
+  const href = selectedMemory ? resolveMemoryHref(selectedMemory) : null;
+
+  console.log('Selected Memory:', selectedMemory);
   return (
     <ExpoModal
       animationType="fade"
@@ -186,36 +223,34 @@ function Modal({
           onPress={(event) => event.stopPropagation()}
         >
           <ExpoImage
-            source={{
-              uri:
-                selectedMemory?.imageUrl ||
-                'https://via.placeholder.com/600x400',
-            }}
+            source={
+              typeof selectedMemory?.imageUrl === 'string'
+                ? { uri: selectedMemory.imageUrl }
+                : (selectedMemory?.imageUrl ?? FALLBACK_COVER_IMAGE)
+            }
             style={[styles.modalImage]}
           />
           <View style={{ alignItems: 'center', gap: space.xxs }}>
-            <Text style={styles.modalTextTitle}>{selectedMemory?.title}</Text>
-            <Text style={styles.modalTextDate}>
-              {selectedMemory?.date || 'Unknown Date'}
+            <Text numberOfLines={1} style={styles.modalTextTitle}>
+              {selectedMemory?.title}
+            </Text>
+            <Text style={styles.modalTextDate}>{selectedMemory?.date}</Text>
+
+            <Text numberOfLines={2} style={styles.modalTextDescription}>
+              {selectedMemory?.description}
             </Text>
           </View>
-          <Button
-            color={
-              MEMORY_TYPE_COLORS[
-                (selectedMemory?.type as MemoryType) || 'moments'
-              ]
-            }
-            variant="default"
-            label={`See ${selectedMemory?.type as MemoryType}`}
-            onPress={() => {
-              navigate(
-                `/${selectedMemory?.type as MemoryType}s#${selectedMemory?.id}`,
-              );
-              setModalVisible(false);
-            }}
-            // Handle see memory action, e.g., navigate to detail screen
-          />
+
+          <Link asChild href={href ? href : '/+not-found'}>
+            <Button
+              color={MEMORY_TYPE_COLORS[selectedMemory?.type ?? 'moment']}
+              variant="default"
+              label={`See ${selectedMemory?.type as MemoryType}`}
+              onPress={() => setModalVisible(false)}
+            />
+          </Link>
         </Pressable>
+
         <View>
           <Text style={styles.closeButton}>Click anywhere to close</Text>
         </View>
@@ -257,14 +292,8 @@ const styles = StyleSheet.create({
 
   modalView: {
     maxWidth: 360,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    boxShadow: `0px 4px 12px 0px ${baseColors.bg}`,
     height: 'auto',
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
     elevation: 5,
     width: '100%',
     backgroundColor: baseColors.text,
@@ -283,14 +312,32 @@ const styles = StyleSheet.create({
   },
 
   modalTextTitle: {
+    color: baseColors.bg,
     fontFamily: text.family.semiBold,
-    lineHeight: text.lineHeight.xl,
-    fontSize: text.size.xl,
+    lineHeight: text.lineHeight.lg,
+    fontSize: text.size.lg,
   },
   modalTextDate: {
+    color: baseColors.textSoft,
     fontSize: text.size.xs,
     lineHeight: text.lineHeight.xs,
     fontFamily: text.family.mediumItalic,
+  },
+  modalTextDescription: {
+    color: baseColors.textMuted,
+    fontFamily: text.family.regular,
+    fontSize: text.size.sm,
+    lineHeight: text.lineHeight.sm,
+    textAlign: 'center',
+  },
+
+  emptyText: {
+    color: baseColors.textSoft,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: baseColors.textError,
+    textAlign: 'center',
   },
 
   closeButton: {

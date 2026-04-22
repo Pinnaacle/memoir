@@ -6,7 +6,7 @@ import Chip from './Chip';
 import { Text } from './Text';
 
 interface ImageProps {
-  source: string;
+  source: string | number;
   variant?: 'default' | 'large' | 'polaroid';
   chip?: {
     label: string;
@@ -16,6 +16,14 @@ interface ImageProps {
     color: string;
     date: string;
   };
+}
+
+function resolveImageSource(source: string | number) {
+  if (typeof source === 'string') {
+    return { uri: source };
+  }
+
+  return source;
 }
 
 export default function Image({
@@ -37,15 +45,19 @@ export default function Image({
 }
 
 function DefaultImage({ source }: ImageProps) {
+  const imageSource = resolveImageSource(source);
+
   return (
-    <ExpoImage source={{ uri: source }} style={styles.imageContainerDefault} />
+    <ExpoImage source={imageSource} style={styles.imageContainerDefault} />
   );
 }
 
 function LargeImage({ source, chip }: ImageProps) {
+  const imageSource = resolveImageSource(source);
+
   return (
     <View style={styles.imageContainerLarge}>
-      <ExpoImage source={{ uri: source }} style={styles.imageLarge} />
+      <ExpoImage source={imageSource} style={styles.imageLarge} />
       <Chip
         style={styles.chip}
         isSelected
@@ -57,6 +69,8 @@ function LargeImage({ source, chip }: ImageProps) {
 }
 
 function PolaroidImage({ source, polaroid }: ImageProps) {
+  const imageSource = resolveImageSource(source);
+
   let randomRotation = Math.random() * 10 - 5; // Random rotation between -5 and 5 degrees
   let pinOffset = 175 / 2 - 8; // Center the pin based on the image width and pin size
   return (
@@ -68,7 +82,7 @@ function PolaroidImage({ source, polaroid }: ImageProps) {
         },
       ]}
     >
-      <ExpoImage source={{ uri: source }} style={styles.imagePolaroid} />
+      <ExpoImage source={imageSource} style={styles.imagePolaroid} />
       <View
         style={[
           styles.pin,
