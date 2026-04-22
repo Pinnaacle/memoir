@@ -4,8 +4,9 @@
     "slug": "Memoir",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/favicon.png",
-    "scheme": "memoir",
+    "icon": "./assets/images/cameron_mascot.png",
+    "favicon": "./assets/images/cameron_mascot.png",
+    "scheme": "Memoir",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -14,11 +15,11 @@
         "light": "./assets/images/ios-light.png",
         "dark": "./assets/images/ios-dark.png"
       },
-      "bundleIdentifier": "com.anonymous.memoir"
+      "bundleIdentifier": "com.anonymous.memoir",
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1a1a1a",
         "foregroundImage": "./assets/images/adaptive-icon.png"
       },
       "edgeToEdgeEnabled": true,
@@ -27,7 +28,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/cameron_mascot.png"
     },
     "plugins": [
       "expo-router",
