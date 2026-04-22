@@ -69,7 +69,8 @@ function getOptimisticMomentData(
     .map((photo) => ({
       storagePath: photo.storagePath!,
       url: photo.uri,
-    }));
+    }))
+    .slice(0, MAX_IMAGES_PER_UPLOAD);
 
   return {
     coverImage: optimisticPhotos[0]?.url,
