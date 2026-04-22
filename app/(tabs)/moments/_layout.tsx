@@ -10,17 +10,6 @@ export default function MomentsLayout() {
       }}
     >
       <Stack.Screen name="index" />
-      <Stack.Screen
-        name="new"
-        options={{
-          animation: 'slide_from_bottom',
-          presentation: 'modal',
-        }}
-      />
-      <Stack.Screen
-        name="[id]"
-        options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
-      />
     </Stack>
   );
 }

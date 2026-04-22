@@ -13,7 +13,7 @@ import { useFonts } from 'expo-font';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { baseColors } from '../theme/colors';
 
@@ -112,6 +112,13 @@ export default function RootLayout() {
     return <Redirect href="/(tabs)" />;
   }
 
+  const detailScreenOptions = {
+    presentation: 'card' as const,
+    ...(Platform.OS === 'android'
+      ? { animation: 'slide_from_right' as const }
+      : null),
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
@@ -125,6 +132,25 @@ export default function RootLayout() {
           <Stack.Screen name="sign-in" />
           <Stack.Screen name="sign-up" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="events/new"
+            options={{ presentation: 'modal' }}
+          />
+          <Stack.Screen
+            name="events/[id]"
+            options={detailScreenOptions}
+          />
+          <Stack.Screen
+            name="moments/new"
+            options={{
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen
+            name="moments/[id]"
+            options={detailScreenOptions}
+          />
           <Stack.Screen name="+not-found" />
         </Stack>
       </SafeAreaProvider>

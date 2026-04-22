@@ -35,7 +35,7 @@ import {
   View,
 } from 'react-native';
 
-const FALLBACK_COVER_IMAGE = require('../../../assets/images/fallbackImage.png');
+const FALLBACK_COVER_IMAGE = require('../../assets/images/fallbackImage.png');
 
 function formatOccurredOn(dateValue: string): string {
   const date = new Date(dateValue);
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   },
   topButtons: {
     position: 'absolute',
-    top: space.lg,
+    top: 60,
     left: 0,
     right: 0,
     zIndex: 1,
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
   menuPanel: {
     position: 'absolute',
     right: space.lg,
-    top: space.lg + 48,
+    top: space.lg + 84,
     minWidth: 168,
     backgroundColor: baseColors.bg,
     borderRadius: radius.lg,
