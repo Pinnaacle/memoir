@@ -13,7 +13,6 @@ import { type ImageBucket, MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import { useEffect, useMemo, useState } from 'react';
 import { useImageUpload } from './useImageUpload';
 
-const SAVE_TIMEOUT_MS = 10000;
 const UPLOADING_STATES: ImageUploadStatus[] = ['local', 'uploading'];
 
 type UseEntryFormOptions = {
@@ -41,29 +40,6 @@ function getFailedUploadMessage(uploadError: string | null) {
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
-}
-
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  fallback: string,
-): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      reject(new Error(fallback));
-    }, timeoutMs);
-
-    promise.then(
-      (value) => {
-        clearTimeout(timeoutId);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timeoutId);
-        reject(error);
-      },
-    );
-  });
 }
 
 export function useEntryForm({
@@ -154,7 +130,7 @@ export function useEntryForm({
     setSaveState('saving');
 
     try {
-      await withTimeout(submit(), SAVE_TIMEOUT_MS, saveErrorMessage);
+      await submit();
       setSaveState('saved');
       void triggerSuccessFeedback();
       await wait(SAVE_SUCCESS_FEEDBACK_MS);
