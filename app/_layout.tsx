@@ -114,8 +114,34 @@ export default function RootLayout() {
           </Stack.Protected>
           <Stack.Protected guard={authState.isSignedIn}>
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="events" />
-            <Stack.Screen name="moments" />
+            <Stack.Screen
+              name="events/new"
+              options={{
+                animation: 'slide_from_bottom',
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen
+              name="events/[id]"
+              options={{
+                animation: 'slide_from_right',
+                presentation: 'card',
+              }}
+            />
+            <Stack.Screen
+              name="moments/new"
+              options={{
+                animation: 'slide_from_bottom',
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen
+              name="moments/[id]"
+              options={{
+                animation: 'slide_from_right',
+                presentation: 'card',
+              }}
+            />
           </Stack.Protected>
           <Stack.Screen name="+not-found" />
         </Stack>
