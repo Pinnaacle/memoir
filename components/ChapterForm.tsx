@@ -54,13 +54,29 @@ function makeItemKey(kind: ChapterItemKind, id: string) {
   return `${kind}:${id}`;
 }
 
-type SelectableItem = {
-  kind: ChapterItemKind;
+type SelectableSource = {
   id: string;
   title: string;
   occurredOn: string;
   coverImage?: string;
 };
+
+type SelectableItem = SelectableSource & {
+  kind: ChapterItemKind;
+};
+
+function toSelectableItem(
+  kind: ChapterItemKind,
+  source: SelectableSource,
+): SelectableItem {
+  return {
+    kind,
+    id: source.id,
+    title: source.title,
+    occurredOn: source.occurredOn,
+    coverImage: source.coverImage,
+  };
+}
 
 export type ChapterInitialSelection = {
   kind: ChapterItemKind;
@@ -124,24 +140,16 @@ export default function ChapterForm({
   const itemsByKey = useMemo(() => {
     const map = new Map<string, SelectableItem>();
     for (const moment of moments) {
-      const key = makeItemKey('moment', moment.id);
-      map.set(key, {
-        kind: 'moment',
-        id: moment.id,
-        title: moment.title,
-        occurredOn: moment.occurredOn,
-        coverImage: moment.coverImage,
-      });
+      map.set(
+        makeItemKey('moment', moment.id),
+        toSelectableItem('moment', moment),
+      );
     }
     for (const event of events) {
-      const key = makeItemKey('event', event.id);
-      map.set(key, {
-        kind: 'event',
-        id: event.id,
-        title: event.title,
-        occurredOn: event.occurredOn,
-        coverImage: event.coverImage,
-      });
+      map.set(
+        makeItemKey('event', event.id),
+        toSelectableItem('event', event),
+      );
     }
     return map;
   }, [events, moments]);
@@ -274,9 +282,7 @@ export default function ChapterForm({
     }
   };
 
-  const hasMoments = moments.length > 0;
-  const hasEvents = events.length > 0;
-  const hasAnyItems = hasMoments || hasEvents;
+  const hasAnyItems = moments.length > 0 || events.length > 0;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -394,58 +400,24 @@ export default function ChapterForm({
                 </Text>
               ) : null}
 
-              {!isLoadingItems && hasMoments ? (
-                <View style={styles.group}>
-                  <Text style={styles.groupLabel}>Moments</Text>
-                  <View style={styles.groupList}>
-                    {moments.map((moment) => {
-                      const item: SelectableItem = {
-                        kind: 'moment',
-                        id: moment.id,
-                        title: moment.title,
-                        occurredOn: moment.occurredOn,
-                        coverImage: moment.coverImage,
-                      };
-                      const key = makeItemKey('moment', moment.id);
-                      const selected = selectedKeys.has(key);
-                      return (
-                        <SelectableRow
-                          key={key}
-                          item={item}
-                          onToggle={toggleItem}
-                          selected={selected}
-                        />
-                      );
-                    })}
-                  </View>
-                </View>
+              {!isLoadingItems ? (
+                <SelectableGroup
+                  kind="moment"
+                  label="Moments"
+                  onToggle={toggleItem}
+                  selectedKeys={selectedKeys}
+                  sources={moments}
+                />
               ) : null}
 
-              {!isLoadingItems && hasEvents ? (
-                <View style={styles.group}>
-                  <Text style={styles.groupLabel}>Events</Text>
-                  <View style={styles.groupList}>
-                    {events.map((event) => {
-                      const item: SelectableItem = {
-                        kind: 'event',
-                        id: event.id,
-                        title: event.title,
-                        occurredOn: event.occurredOn,
-                        coverImage: event.coverImage,
-                      };
-                      const key = makeItemKey('event', event.id);
-                      const selected = selectedKeys.has(key);
-                      return (
-                        <SelectableRow
-                          key={key}
-                          item={item}
-                          onToggle={toggleItem}
-                          selected={selected}
-                        />
-                      );
-                    })}
-                  </View>
-                </View>
+              {!isLoadingItems ? (
+                <SelectableGroup
+                  kind="event"
+                  label="Events"
+                  onToggle={toggleItem}
+                  selectedKeys={selectedKeys}
+                  sources={events}
+                />
               ) : null}
 
               {hasTriedSubmit && itemsError ? (
@@ -469,6 +441,46 @@ export default function ChapterForm({
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+type SelectableGroupProps = {
+  kind: ChapterItemKind;
+  label: string;
+  onToggle: (item: SelectableItem) => void;
+  selectedKeys: Set<string>;
+  sources: SelectableSource[];
+};
+
+function SelectableGroup({
+  kind,
+  label,
+  onToggle,
+  selectedKeys,
+  sources,
+}: SelectableGroupProps) {
+  if (sources.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.group}>
+      <Text style={styles.groupLabel}>{label}</Text>
+      <View style={styles.groupList}>
+        {sources.map((source) => {
+          const item = toSelectableItem(kind, source);
+          const key = makeItemKey(kind, source.id);
+          return (
+            <SelectableRow
+              item={item}
+              key={key}
+              onToggle={onToggle}
+              selected={selectedKeys.has(key)}
+            />
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
