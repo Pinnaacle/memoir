@@ -24,6 +24,10 @@ export type CreateChapterInput = {
   items: ChapterItemInput[];
 };
 
+export type UpdateChapterInput = CreateChapterInput & {
+  chapterId: string;
+};
+
 export type ChapterListItem = {
   id: string;
   title: string;
@@ -80,6 +84,52 @@ const PREVIEW_IMAGE_LIMIT = 4;
 
 function makeRefKey(kind: ChapterItemKind, refId: string) {
   return `${kind}:${refId}`;
+}
+
+function buildChapterWriteValues(input: CreateChapterInput) {
+  const description = input.description.trim();
+  return {
+    title: input.title.trim(),
+    chapter_type: input.chapterType.trim() || null,
+    description: description.length > 0 ? description : null,
+    occurred_on: toLocalDateString(input.occurredAt),
+  };
+}
+
+function dedupeChapterItems(items: ChapterItemInput[]): ChapterItemInput[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = makeRefKey(item.kind, item.id);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function insertChapterItems(
+  groupId: string,
+  chapterId: string,
+  items: ChapterItemInput[],
+): Promise<void> {
+  if (items.length === 0) {
+    return;
+  }
+
+  const deduped = dedupeChapterItems(items);
+
+  const { error } = await supabase.from('chapter_items').insert(
+    deduped.map((item, index) => ({
+      group_id: groupId,
+      chapter_id: chapterId,
+      ref_type: item.kind,
+      ref_id: item.id,
+      sort_order: index,
+    })),
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 async function fetchRefPhotoPaths(
@@ -393,17 +443,12 @@ export async function createChapter(
     throw new Error('A group must be selected before creating a chapter.');
   }
 
-  const description = input.description.trim();
-
   const { data: insertedChapter, error: chapterError } = await supabase
     .from('chapters')
     .insert({
+      ...buildChapterWriteValues(input),
       group_id: input.groupId,
       created_by: userId,
-      title: input.title.trim(),
-      chapter_type: input.chapterType.trim() || null,
-      description: description.length > 0 ? description : null,
-      occurred_on: toLocalDateString(input.occurredAt),
     })
     .select('id')
     .single();
@@ -416,33 +461,53 @@ export async function createChapter(
     throw new Error('Could not create chapter.');
   }
 
-  if (input.items.length === 0) {
-    return insertedChapter.id;
-  }
-
-  const seen = new Set<string>();
-  const dedupedItems = input.items.filter((item) => {
-    const key = makeRefKey(item.kind, item.id);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  const { error: itemsError } = await supabase.from('chapter_items').insert(
-    dedupedItems.map((item, index) => ({
-      group_id: input.groupId,
-      chapter_id: insertedChapter.id,
-      ref_type: item.kind,
-      ref_id: item.id,
-      sort_order: index,
-    })),
-  );
-
-  if (itemsError) {
-    throw new Error(itemsError.message);
-  }
+  await insertChapterItems(input.groupId, insertedChapter.id, input.items);
 
   return insertedChapter.id;
+}
+
+export async function updateChapter(
+  input: UpdateChapterInput,
+): Promise<string> {
+  await requireCurrentUserId('You must be signed in to edit a chapter.');
+
+  if (!input.groupId) {
+    throw new Error('A group must be selected before editing a chapter.');
+  }
+
+  if (!input.chapterId) {
+    throw new Error('Chapter not found.');
+  }
+
+  const { data: updatedChapter, error: chapterError } = await supabase
+    .from('chapters')
+    .update(buildChapterWriteValues(input))
+    .eq('id', input.chapterId)
+    .eq('group_id', input.groupId)
+    .select('id')
+    .single();
+
+  if (chapterError) {
+    throw new Error(chapterError.message);
+  }
+
+  if (!updatedChapter?.id) {
+    throw new Error('Could not update chapter.');
+  }
+
+  const { error: deleteItemsError } = await supabase
+    .from('chapter_items')
+    .delete()
+    .eq('group_id', input.groupId)
+    .eq('chapter_id', input.chapterId);
+
+  if (deleteItemsError) {
+    throw new Error(deleteItemsError.message);
+  }
+
+  await insertChapterItems(input.groupId, input.chapterId, input.items);
+
+  return updatedChapter.id;
 }
 
 export async function deleteChapter(chapterId: string, groupId: string) {

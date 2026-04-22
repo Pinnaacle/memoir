@@ -1,7 +1,11 @@
 import Divider from '@/components/ui/Divider';
+import PopoverMenu from '@/components/ui/PopoverMenu';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
-import { useChapterDetailQuery } from '@/hooks/useChapters';
+import {
+  useChapterDetailQuery,
+  useDeleteChapterMutation,
+} from '@/hooks/useChapters';
 import { parseLocalDate } from '@/lib/date';
 import type { ChapterDetailEntry } from '@/services/chapters';
 import { baseColors, sectionColors } from '@/theme/colors';
@@ -10,10 +14,16 @@ import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { Image } from 'expo-image';
 import { type Href, Link, router, useLocalSearchParams } from 'expo-router';
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Ellipsis,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
@@ -77,12 +87,14 @@ export default function ChapterDetailScreen() {
   const rawId = params.id;
   const chapterId = Array.isArray(rawId) ? rawId[0] : rawId;
   const chapterQuery = useChapterDetailQuery(chapterId, activeGroup?.id);
+  const deleteChapterMutation = useDeleteChapterMutation();
   const chapter = chapterQuery.data;
   const bannerImages = (chapter?.entries ?? [])
     .map((entry) => entry.coverImage)
     .filter((url): url is string => Boolean(url));
   const hasBannerImages = bannerImages.length > 0;
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const displayDate = chapter ? formatOccurredOn(chapter.occurredOn) : '';
   const displayType = formatChapterType(chapter?.chapterType ?? null);
   const loadError =
@@ -91,6 +103,62 @@ export default function ChapterDetailScreen() {
       : chapterQuery.error
         ? 'Could not load chapter.'
         : null;
+  const isDeleting = deleteChapterMutation.isPending;
+
+  const removeChapter = async () => {
+    if (!chapterId || !activeGroup?.id) {
+      return;
+    }
+
+    try {
+      await deleteChapterMutation.mutateAsync({
+        chapterId,
+        groupId: activeGroup.id,
+      });
+      router.back();
+    } catch (error) {
+      Alert.alert(
+        'Could not delete chapter',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    }
+  };
+
+  const handleEdit = () => {
+    setIsMenuOpen(false);
+
+    if (!chapterId || isDeleting) {
+      return;
+    }
+
+    router.push(`/chapters/new?chapterId=${encodeURIComponent(chapterId)}`);
+  };
+
+  const handleDelete = () => {
+    setIsMenuOpen(false);
+
+    if (!chapterId || !activeGroup?.id || isDeleting) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete chapter?',
+      'This chapter will be removed. Linked moments and events stay in your memories.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void removeChapter();
+          },
+        },
+      ],
+    );
+  };
 
   function handleBannerScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     if (width <= 0) {
@@ -269,7 +337,38 @@ export default function ChapterDetailScreen() {
         >
           <ChevronLeft color={baseColors.text} size={22} />
         </Pressable>
+
+        <Pressable
+          accessibilityHint="Opens chapter actions"
+          accessibilityLabel="More options"
+          accessibilityRole="button"
+          disabled={isDeleting}
+          onPress={() => setIsMenuOpen(true)}
+          style={[
+            styles.menuButton,
+            isDeleting ? styles.menuButtonDisabled : null,
+          ]}
+        >
+          <Ellipsis color={baseColors.text} size={22} />
+        </Pressable>
       </View>
+
+      <PopoverMenu
+        items={[
+          {
+            label: 'Edit chapter',
+            onPress: handleEdit,
+          },
+          {
+            label: isDeleting ? 'Deleting...' : 'Delete chapter',
+            onPress: handleDelete,
+            disabled: isDeleting,
+            variant: 'danger',
+          },
+        ]}
+        onClose={() => setIsMenuOpen(false)}
+        visible={isMenuOpen}
+      />
     </View>
   );
 }
@@ -323,6 +422,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: space.lg,
     width: 40,
+  },
+  menuButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: space.lg - 6,
+    top: space.lg,
+    width: 40,
+  },
+  menuButtonDisabled: {
+    opacity: 0.45,
   },
   typePill: {
     alignItems: 'center',
