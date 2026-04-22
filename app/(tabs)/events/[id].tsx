@@ -99,6 +99,22 @@ function getErrorMessage(error: unknown) {
     : 'Failed to save event photos. Please try again.';
 }
 
+function getEventPhotoValues(event: {
+  title: string;
+  occurredOn: string;
+  locationText: string | null;
+  mood: string | null;
+  notes: string | null;
+}) {
+  return {
+    title: event.title,
+    occurredAt: parseOccurredAt(event.occurredOn),
+    location: event.locationText ?? '',
+    mood: event.mood ?? '',
+    notes: event.notes ?? '',
+  };
+}
+
 export default function EventDetailScreen() {
   const { activeGroup, isLoading: isLoadingGroups } = useActiveGroup();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -141,11 +157,16 @@ export default function EventDetailScreen() {
     (photo) => photo.uploadStatus === 'failed',
   );
   const hasFailedUploads = failedUploads.length > 0;
+  const hasTransientPhotos = photos.some(
+    (photo) => photo.uploadStatus !== 'uploaded',
+  );
   const hasPendingUploads = photos.some(
     (photo) =>
       photo.uploadStatus === 'local' || photo.uploadStatus === 'uploading',
   );
-  const retryUploadsDisabled = isDeleting || isSavingPhotos || hasPendingUploads;
+  const retryUploadsDisabled =
+    isDeleting || isSavingPhotos || hasPendingUploads;
+  const retrySaveDisabled = isMutatingEvent || hasPendingUploads;
 
   useEffect(() => {
     if (!event) {
@@ -155,10 +176,6 @@ export default function EventDetailScreen() {
     const nextPhotos = getInitialPhotos(event.photos);
 
     if (hasLocalPhotoChanges) {
-      const hasTransientPhotos = photos.some(
-        (photo) => photo.uploadStatus !== 'uploaded',
-      );
-
       if (!hasTransientPhotos && uploadedPhotoKey === eventPhotoKey) {
         setHasLocalPhotoChanges(false);
         setSaveError(null);
@@ -171,12 +188,12 @@ export default function EventDetailScreen() {
 
     setPhotos((current) => {
       const currentPhotoKey = getPhotoKey(getUploadedPhotos(current));
-      const hasTransientPhotos = current.some(
+      const hasCurrentTransientPhotos = current.some(
         (photo) => photo.uploadStatus !== 'uploaded',
       );
 
       if (
-        hasTransientPhotos ||
+        hasCurrentTransientPhotos ||
         (currentPhotoKey === eventPhotoKey &&
           current.length === nextPhotos.length)
       ) {
@@ -187,7 +204,14 @@ export default function EventDetailScreen() {
     });
 
     lastSubmittedPhotoKeyRef.current = eventPhotoKey;
-  }, [event, eventPhotoKey, hasLocalPhotoChanges, photos, uploadedPhotoKey]);
+  }, [
+    event,
+    eventPhotoKey,
+    hasLocalPhotoChanges,
+    hasTransientPhotos,
+    photos,
+    uploadedPhotoKey,
+  ]);
 
   const savePhotos = useCallback(
     async (nextPhotos: SelectedImage[]) => {
@@ -210,11 +234,7 @@ export default function EventDetailScreen() {
         await updateEventMutation.mutateAsync({
           eventId,
           groupId: activeGroup.id,
-          title: event.title,
-          occurredAt: parseOccurredAt(event.occurredOn),
-          location: event.locationText ?? '',
-          mood: event.mood ?? 'Romantic',
-          notes: event.notes ?? '',
+          ...getEventPhotoValues(event),
           photos: uploadedPhotos,
         });
       } catch (error) {
@@ -438,18 +458,16 @@ export default function EventDetailScreen() {
               disabled={isMutatingEvent}
               maxImages={MAX_IMAGES_PER_UPLOAD}
               onChange={handlePhotoChange}
-              onRequestUpload={(newPhotos) => {
-                void startUpload(newPhotos);
-              }}
+              onRequestUpload={startUpload}
               value={photos}
             />
 
             {hasFailedUploads ? (
               <Pressable
-                  accessibilityHint="Retries failed photo uploads"
-                  accessibilityLabel="Retry failed uploads"
-                  accessibilityRole="button"
-                  disabled={retryUploadsDisabled}
+                accessibilityHint="Retries failed photo uploads"
+                accessibilityLabel="Retry failed uploads"
+                accessibilityRole="button"
+                disabled={retryUploadsDisabled}
                 onPress={() => {
                   setSaveError(null);
                   void startUpload(failedUploads);
@@ -471,7 +489,7 @@ export default function EventDetailScreen() {
                   accessibilityHint="Retries saving the current event photos"
                   accessibilityLabel="Retry saving photos"
                   accessibilityRole="button"
-                  disabled={isMutatingEvent || hasPendingUploads}
+                  disabled={retrySaveDisabled}
                   onPress={() => {
                     failedSavePhotoKeyRef.current = null;
                     void savePhotos(photos);
@@ -479,12 +497,12 @@ export default function EventDetailScreen() {
                   style={({ pressed }) => [
                     styles.retryButton,
                     pressed ? styles.retryButtonPressed : null,
-                    isMutatingEvent || hasPendingUploads
-                      ? styles.retryButtonDisabled
-                      : null,
+                    retrySaveDisabled ? styles.retryButtonDisabled : null,
                   ]}
                 >
-                  <Text style={styles.retryButtonText}>Retry saving photos</Text>
+                  <Text style={styles.retryButtonText}>
+                    Retry saving photos
+                  </Text>
                 </Pressable>
               </>
             ) : null}
