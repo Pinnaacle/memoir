@@ -23,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function SignInScreen() {
   //For preventing spamming the button hitting rate limiting on invalid emails
   const [isCoolingDown, setIsCoolingDown] = useState(false);
+  const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -45,6 +46,7 @@ export default function SignInScreen() {
       return;
     }
 
+    setHasTriedSubmit(true);
     setIsCoolingDown(true);
     try {
       await form.handleSubmit();
@@ -90,7 +92,7 @@ export default function SignInScreen() {
                     onBlur={field.handleBlur}
                     onChangeText={field.handleChange}
                   />
-                  {getFieldError('email') ? (
+                  {hasTriedSubmit && getFieldError('email') ? (
                     <Text style={styles.errorText}>
                       {getFieldError('email')}
                     </Text>
@@ -113,7 +115,7 @@ export default function SignInScreen() {
                     onBlur={field.handleBlur}
                     onChangeText={field.handleChange}
                   />
-                  {getFieldError('password') ? (
+                  {hasTriedSubmit && getFieldError('password') ? (
                     <Text style={styles.errorText}>
                       {getFieldError('password')}
                     </Text>
