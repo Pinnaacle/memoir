@@ -24,6 +24,11 @@ type UploadVariables = {
   context: UploadContext;
 };
 
+export type UploadBatchResult = {
+  failedIds: string[];
+  uploadedIds: string[];
+};
+
 export const imageUploadKeys = {
   context: ['image-upload', 'context'] as const,
 };
@@ -53,9 +58,15 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
   );
 
   const startUpload = useCallback(
-    async (newImages: SelectedImage[]) => {
+    async (newImages: SelectedImage[]): Promise<UploadBatchResult> => {
+      const failedIds: string[] = [];
+      const uploadedIds: string[] = [];
+
       if (newImages.length === 0) {
-        return;
+        return {
+          failedIds,
+          uploadedIds,
+        };
       }
 
       setImages((current) =>
@@ -82,7 +93,12 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
               : image,
           ),
         );
-        return;
+        failedIds.push(...newImages.map((image) => image.id));
+
+        return {
+          failedIds,
+          uploadedIds,
+        };
       }
 
       await Promise.all(
@@ -105,6 +121,7 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
                   : existing,
               ),
             );
+            uploadedIds.push(image.id);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : 'Upload failed.';
@@ -120,9 +137,15 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
                   : existing,
               ),
             );
+            failedIds.push(image.id);
           }
         }),
       );
+
+      return {
+        failedIds,
+        uploadedIds,
+      };
     },
     [ensureContext, mutateAsync, queryClient, setImages],
   );
