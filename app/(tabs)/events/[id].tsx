@@ -261,11 +261,12 @@ export default function EventDetailScreen() {
                 }
 
                 return (
-                  <View
-                    key={photo.storagePath}
-                    style={[styles.photoThumbWrap, { gap }]}
-                  >
-                    <Image contentFit="cover" source={{ uri: photo.url }} />
+                  <View key={photo.storagePath} style={styles.photoThumbWrap}>
+                    <Image
+                      contentFit="cover"
+                      source={{ uri: photo.url }}
+                      style={styles.photoThumb}
+                    />
                   </View>
                 );
               })}
@@ -449,13 +450,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   photoThumbWrap: {
-    display: 'flex',
-    flex: 3,
-    marginHorizontal: 'auto',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    borderRadius: 14,
+    height: 111,
+    overflow: 'hidden',
+    width: 111,
+  },
+  photoThumb: {
     width: '100%',
+    height: '100%',
   },
 
   photoPlaceholder: {
