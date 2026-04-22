@@ -28,8 +28,8 @@ const headerTitleByRoute: Record<string, string> = {
 
 const headerTagLineByRoute: Record<string, string | undefined> = {
   index: 'Your story, one memory at a time',
-  moments: 'Insert very meaningful text here',
-  events: 'Insert very meaningful text here',
+  moments: 'The little moments you never want to forget',
+  events: 'The milestones that shaped your story',
   chapters: 'Insert very meaningful text here',
   memories: 'A lifetime of memories',
 };
