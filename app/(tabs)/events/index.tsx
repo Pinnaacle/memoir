@@ -2,11 +2,13 @@ import { Card } from '@/components/ui/Card';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useEventsQuery } from '@/hooks/useEvents';
+import { triggerTapFeedback } from '@/lib/interaction';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text } from '@/theme/type';
-import { type Href, Link } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -51,6 +53,32 @@ export default function EventsIndexScreen() {
     activeGroup?.groupKind === 'personal'
       ? 'Personal'
       : (activeGroup?.name ?? 'this space');
+  const [isNavigating, setIsNavigating] = useState(false);
+  const isNavigatingRef = useRef(false);
+  const releaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (releaseTimeoutRef.current) {
+        clearTimeout(releaseTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  function handleNavigate(href: Href) {
+    if (isNavigatingRef.current) {
+      return;
+    }
+
+    isNavigatingRef.current = true;
+    setIsNavigating(true);
+    void triggerTapFeedback();
+    router.push(href);
+    releaseTimeoutRef.current = setTimeout(() => {
+      isNavigatingRef.current = false;
+      setIsNavigating(false);
+    }, 700);
+  }
 
   return (
     <View style={styles.container}>
@@ -79,19 +107,19 @@ export default function EventsIndexScreen() {
 
           {!isLoadingGroups && !eventsQuery.isPending && !loadError
             ? events.map((event) => (
-                <Link
-                  asChild
-                  href={`/events/${event.id}` as Href}
+                <Pressable
+                  accessibilityHint="Opens this event"
+                  accessibilityRole="button"
+                  disabled={isNavigating}
                   key={event.id}
+                  onPress={() => handleNavigate(`/events/${event.id}`)}
+                  style={({ pressed }) => [
+                    styles.cardPressable,
+                    pressed ? styles.cardPressed : null,
+                    isNavigating ? styles.cardDisabled : null,
+                  ]}
                 >
-                  <Pressable
-                    accessibilityHint="Opens this event"
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.cardPressable,
-                      pressed ? styles.cardPressed : null,
-                    ]}
-                  >
+                  <View pointerEvents="none" style={styles.cardInner}>
                     <Card
                       color={sectionColors.events}
                       coverImage={event.coverImage ?? FALLBACK_COVER_IMAGE}
@@ -101,17 +129,24 @@ export default function EventsIndexScreen() {
                       type={event.mood ?? 'No mood set'}
                       variant="compressed"
                     />
-                  </Pressable>
-                </Link>
+                  </View>
+                </Pressable>
               ))
             : null}
         </View>
       </ScrollView>
-      <Link href="/events/new" asChild>
-        <Pressable accessibilityRole="button" style={styles.createButton}>
-          <Plus color={baseColors.bg} size={28} strokeWidth={2.4} />
-        </Pressable>
-      </Link>
+      <Pressable
+        accessibilityRole="button"
+        disabled={isNavigating}
+        onPress={() => handleNavigate('/events/new')}
+        style={({ pressed }) => [
+          styles.createButton,
+          pressed ? styles.cardPressed : null,
+          isNavigating ? styles.createButtonDisabled : null,
+        ]}
+      >
+        <Plus color={baseColors.bg} size={28} strokeWidth={2.4} />
+      </Pressable>
     </View>
   );
 }
@@ -132,8 +167,14 @@ const styles = StyleSheet.create({
   cardPressable: {
     borderRadius: 26,
   },
+  cardInner: {
+    borderRadius: 26,
+  },
   cardPressed: {
-    opacity: 0.92,
+    opacity: 0.82,
+  },
+  cardDisabled: {
+    opacity: 0.55,
   },
   emptyText: {
     color: baseColors.textSoft,
@@ -166,5 +207,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 18,
     elevation: 4,
+  },
+  createButtonDisabled: {
+    opacity: 0.55,
   },
 });

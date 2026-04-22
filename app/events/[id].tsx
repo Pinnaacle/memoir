@@ -7,6 +7,12 @@ import PopoverMenu from '@/components/ui/PopoverMenu';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
 import {
+  triggerDestructiveFeedback,
+  triggerErrorFeedback,
+  triggerSuccessFeedback,
+  triggerTapFeedback,
+} from '@/lib/interaction';
+import {
   useDeleteEventMutation,
   useEventDetailQuery,
   useUpdateEventMutation,
@@ -167,6 +173,11 @@ export default function EventDetailScreen() {
   const retryUploadsDisabled =
     isDeleting || isSavingPhotos || hasPendingUploads;
   const retrySaveDisabled = isMutatingEvent || hasPendingUploads;
+  const deleteActionLabel = isDeleting
+    ? 'Deleting...'
+    : isSavingPhotos
+      ? 'Saving photos...'
+      : 'Delete event';
 
   useEffect(() => {
     if (!event) {
@@ -216,14 +227,14 @@ export default function EventDetailScreen() {
   const savePhotos = useCallback(
     async (nextPhotos: SelectedImage[]) => {
       if (!eventId || !activeGroup?.id || !event) {
-        return;
+        return false;
       }
 
       const uploadedPhotos = getUploadedPhotos(nextPhotos);
       const nextPhotoKey = getPhotoKey(uploadedPhotos);
 
       if (nextPhotoKey === eventPhotoKey) {
-        return;
+        return true;
       }
 
       lastSubmittedPhotoKeyRef.current = nextPhotoKey;
@@ -237,10 +248,12 @@ export default function EventDetailScreen() {
           ...getEventPhotoValues(event),
           photos: uploadedPhotos,
         });
+        return true;
       } catch (error) {
         failedSavePhotoKeyRef.current = nextPhotoKey;
         lastSubmittedPhotoKeyRef.current = null;
         setSaveError(getErrorMessage(error));
+        return false;
       }
     },
     [activeGroup?.id, event, eventId, eventPhotoKey, updateEventMutation],
@@ -285,18 +298,56 @@ export default function EventDetailScreen() {
     setPhotos(nextPhotos);
   }
 
+  async function handleRetryFailedUploads() {
+    if (retryUploadsDisabled) {
+      return;
+    }
+
+    setSaveError(null);
+    const result = await startUpload(failedUploads);
+
+    if (result.failedIds.length === 0) {
+      void triggerSuccessFeedback();
+      return;
+    }
+
+    setSaveError(
+      'Some photos still failed to upload. Retry them again or remove them.',
+    );
+    void triggerErrorFeedback();
+  }
+
+  async function handleRetrySave() {
+    if (retrySaveDisabled) {
+      return;
+    }
+
+    failedSavePhotoKeyRef.current = null;
+    const didSave = await savePhotos(photos);
+
+    if (didSave) {
+      void triggerSuccessFeedback();
+      return;
+    }
+
+    void triggerErrorFeedback();
+  }
+
   const removeEvent = async () => {
     if (!eventId || !activeGroup?.id) {
       return;
     }
 
     try {
+      await triggerDestructiveFeedback();
       await deleteEventMutation.mutateAsync({
         eventId,
         groupId: activeGroup.id,
       });
+      void triggerSuccessFeedback();
       router.back();
     } catch (error) {
+      void triggerErrorFeedback();
       Alert.alert(
         'Could not delete event',
         error instanceof Error ? error.message : 'Please try again.',
@@ -311,6 +362,7 @@ export default function EventDetailScreen() {
       return;
     }
 
+    void triggerTapFeedback();
     router.push(`/events/new?eventId=${encodeURIComponent(eventId)}`);
   };
 
@@ -437,10 +489,7 @@ export default function EventDetailScreen() {
                 accessibilityLabel="Retry failed uploads"
                 accessibilityRole="button"
                 disabled={retryUploadsDisabled}
-                onPress={() => {
-                  setSaveError(null);
-                  void startUpload(failedUploads);
-                }}
+                onPress={handleRetryFailedUploads}
                 style={({ pressed }) => [
                   styles.retryButton,
                   pressed ? styles.retryButtonPressed : null,
@@ -459,10 +508,7 @@ export default function EventDetailScreen() {
                   accessibilityLabel="Retry saving photos"
                   accessibilityRole="button"
                   disabled={retrySaveDisabled}
-                  onPress={() => {
-                    failedSavePhotoKeyRef.current = null;
-                    void savePhotos(photos);
-                  }}
+                  onPress={handleRetrySave}
                   style={({ pressed }) => [
                     styles.retryButton,
                     pressed ? styles.retryButtonPressed : null,
@@ -502,7 +548,10 @@ export default function EventDetailScreen() {
           accessibilityLabel="More options"
           accessibilityRole="button"
           disabled={isMutatingEvent}
-          onPress={() => setIsMenuOpen(true)}
+          onPress={() => {
+            void triggerTapFeedback();
+            setIsMenuOpen(true);
+          }}
           style={[
             styles.menuButton,
             isMutatingEvent ? styles.menuButtonDisabled : null,
@@ -519,11 +568,7 @@ export default function EventDetailScreen() {
             onPress: handleEdit,
           },
           {
-            label: isDeleting
-              ? 'Deleting...'
-              : isSavingPhotos
-                ? 'Saving photos...'
-                : 'Delete event',
+            label: deleteActionLabel,
             onPress: handleDelete,
             disabled: isMutatingEvent,
             variant: 'danger',

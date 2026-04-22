@@ -43,8 +43,8 @@ export function useCreateEventMutation() {
 
   return useMutation({
     mutationFn: createEvent,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
         queryKey: eventKeys.all,
       });
     },
@@ -56,8 +56,8 @@ export function useUpdateEventMutation() {
 
   return useMutation({
     mutationFn: updateEvent,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
         queryKey: eventKeys.all,
       });
     },
@@ -72,7 +72,7 @@ export function useDeleteEventMutation() {
       deleteEvent(eventId, groupId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: eventKeys.all,
+        queryKey: eventKeys.lists(),
       });
     },
   });

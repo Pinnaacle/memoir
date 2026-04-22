@@ -7,6 +7,12 @@ import PopoverMenu from '@/components/ui/PopoverMenu';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
 import {
+  triggerDestructiveFeedback,
+  triggerErrorFeedback,
+  triggerSuccessFeedback,
+  triggerTapFeedback,
+} from '@/lib/interaction';
+import {
   useDeleteMomentMutation,
   useMomentDetailQuery,
   useUpdateMomentMutation,
@@ -226,14 +232,14 @@ export default function MomentDetailScreen() {
   const savePhotos = useCallback(
     async (nextPhotos: SelectedImage[]) => {
       if (!momentId || !activeGroup?.id || !moment) {
-        return;
+        return false;
       }
 
       const uploadedPhotos = getUploadedPhotos(nextPhotos);
       const nextPhotoKey = getPhotoKey(uploadedPhotos);
 
       if (nextPhotoKey === momentPhotoKey) {
-        return;
+        return true;
       }
 
       lastSubmittedPhotoKeyRef.current = nextPhotoKey;
@@ -247,10 +253,12 @@ export default function MomentDetailScreen() {
           ...getMomentPhotoValues(moment),
           photos: uploadedPhotos,
         });
+        return true;
       } catch (error) {
         failedSavePhotoKeyRef.current = nextPhotoKey;
         lastSubmittedPhotoKeyRef.current = null;
         setSaveError(getErrorMessage(error));
+        return false;
       }
     },
     [activeGroup?.id, moment, momentId, momentPhotoKey, updateMomentMutation],
@@ -295,14 +303,39 @@ export default function MomentDetailScreen() {
     setPhotos(nextPhotos);
   }
 
-  function handleRetryFailedUploads() {
+  async function handleRetryFailedUploads() {
+    if (retryUploadsDisabled) {
+      return;
+    }
+
     setSaveError(null);
-    void startUpload(failedUploads);
+    const result = await startUpload(failedUploads);
+
+    if (result.failedIds.length === 0) {
+      void triggerSuccessFeedback();
+      return;
+    }
+
+    setSaveError(
+      'Some photos still failed to upload. Retry them again or remove them.',
+    );
+    void triggerErrorFeedback();
   }
 
-  function handleRetrySave() {
+  async function handleRetrySave() {
+    if (retrySaveDisabled) {
+      return;
+    }
+
     failedSavePhotoKeyRef.current = null;
-    void savePhotos(photos);
+    const didSave = await savePhotos(photos);
+
+    if (didSave) {
+      void triggerSuccessFeedback();
+      return;
+    }
+
+    void triggerErrorFeedback();
   }
 
   const removeMoment = async () => {
@@ -311,12 +344,15 @@ export default function MomentDetailScreen() {
     }
 
     try {
+      await triggerDestructiveFeedback();
       await deleteMomentMutation.mutateAsync({
         momentId,
         groupId: activeGroup.id,
       });
+      void triggerSuccessFeedback();
       router.back();
     } catch (error) {
+      void triggerErrorFeedback();
       Alert.alert(
         'Could not delete moment',
         error instanceof Error ? error.message : 'Please try again.',
@@ -331,6 +367,7 @@ export default function MomentDetailScreen() {
       return;
     }
 
+    void triggerTapFeedback();
     router.push(`/moments/new?momentId=${encodeURIComponent(momentId)}`);
   };
 
@@ -425,6 +462,7 @@ export default function MomentDetailScreen() {
               maxImages={MAX_IMAGES_PER_UPLOAD}
               onChange={handlePhotoChange}
               onRequestUpload={startUpload}
+              showRemoveButton={false}
               value={photos}
             />
 
@@ -493,7 +531,10 @@ export default function MomentDetailScreen() {
           accessibilityLabel="More options"
           accessibilityRole="button"
           disabled={isMutatingMoment}
-          onPress={() => setIsMenuOpen(true)}
+          onPress={() => {
+            void triggerTapFeedback();
+            setIsMenuOpen(true);
+          }}
           style={[
             styles.menuButton,
             isMutatingMoment ? styles.menuButtonDisabled : null,

@@ -1,4 +1,5 @@
 import { Text } from '@/components/ui/Text';
+import { type SaveState } from '@/lib/interaction';
 import { baseColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
@@ -12,9 +13,20 @@ interface HeaderProps {
   color?: string;
   onClose?: () => void;
   onSave?: () => void;
+  saveDisabled?: boolean;
+  saveState?: SaveState;
 }
 
-export default function Header({ title, color, onClose, onSave }: HeaderProps) {
+export default function Header({
+  title,
+  color,
+  onClose,
+  onSave,
+  saveDisabled = false,
+  saveState = 'idle',
+}: HeaderProps) {
+  const hasSaveAction = typeof onSave === 'function';
+
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={[styles.topBarContainer]}>
@@ -32,13 +44,17 @@ export default function Header({ title, color, onClose, onSave }: HeaderProps) {
           {title}
         </Text>
         <View style={[styles.spaceDiv, { alignItems: 'flex-end' }]}>
-          <Button
-            alignSelf="flex-end"
-            color={color}
-            label="Save"
-            onPress={onSave}
-            variant="default"
-          />
+          {hasSaveAction ? (
+            <Button
+              alignSelf="flex-end"
+              color={color}
+              disabled={saveDisabled}
+              label="Save"
+              onPress={onSave}
+              saveState={saveState}
+              variant="default"
+            />
+          ) : null}
         </View>
       </View>
     </SafeAreaView>

@@ -3,25 +3,43 @@ import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
-import { ImageZoom } from '@likashefqet/react-native-image-zoom';
+import {
+  ImageZoom,
+  type ImageZoomRef,
+} from '@likashefqet/react-native-image-zoom';
 import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { AlertTriangle, Camera, Plus, X } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   LayoutChangeEvent,
   Modal,
   Image as NativeImage,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
   type ViewProps,
 } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -36,6 +54,11 @@ const GRID_COLUMNS = 3;
 const GRID_GAP = space.md;
 const VIEWER_HORIZONTAL_PADDING = space.lg;
 const VIEWER_CLOSE_BUTTON_SIZE = 36;
+const VIEWER_REOPEN_COOLDOWN_MS = 300;
+const VIEWER_DISMISS_DISTANCE = 120;
+const VIEWER_DISMISS_VELOCITY = 1000;
+const VIEWER_DISMISS_ACTIVE_OFFSET_Y = 12;
+const VIEWER_DISMISS_FAIL_OFFSET_X = 28;
 
 type ImageDimensions = {
   width: number;
@@ -140,6 +163,134 @@ function getContainedImageSize(
   };
 }
 
+type FullscreenViewerSlideProps = {
+  image: SelectedImage;
+  index: number;
+  isActive: boolean;
+  onZoomStateChange: (isZoomed: boolean) => void;
+  onResolveDimensions: (imageId: string, dimensions: ImageDimensions) => void;
+  resolvedDimensions: ImageDimensions | null;
+  viewerAvailableHeight: number;
+  viewerAvailableWidth: number;
+  windowWidth: number;
+  bottomInset: number;
+};
+
+function FullscreenViewerSlide({
+  image,
+  index,
+  isActive,
+  onZoomStateChange,
+  onResolveDimensions,
+  resolvedDimensions,
+  viewerAvailableHeight,
+  viewerAvailableWidth,
+  windowWidth,
+  bottomInset,
+}: FullscreenViewerSlideProps) {
+  const zoomRef = useRef<ImageZoomRef>(null);
+  const imageDimensions = getImageDimensions(image, resolvedDimensions);
+  const viewerImageSize = getContainedImageSize(
+    imageDimensions,
+    viewerAvailableWidth,
+    viewerAvailableHeight,
+  );
+
+  const syncZoomState = useCallback(() => {
+    if (!isActive) {
+      return;
+    }
+
+    const scale = zoomRef.current?.getInfo().transformations.scale ?? 1;
+
+    onZoomStateChange(scale > 1.01);
+  }, [isActive, onZoomStateChange]);
+
+  useEffect(() => {
+    if (imageDimensions || !image.uri) {
+      return;
+    }
+
+    let isActiveRequest = true;
+
+    NativeImage.getSize(
+      image.uri,
+      (width, height) => {
+        if (!isActiveRequest) {
+          return;
+        }
+
+        onResolveDimensions(image.id, { width, height });
+      },
+      () => {
+        if (!isActiveRequest) {
+          return;
+        }
+
+        onResolveDimensions(image.id, {
+          width: viewerAvailableWidth || 1,
+          height: viewerAvailableHeight || 1,
+        });
+      },
+    );
+
+    return () => {
+      isActiveRequest = false;
+    };
+  }, [
+    image.id,
+    image.uri,
+    imageDimensions,
+    onResolveDimensions,
+    viewerAvailableHeight,
+    viewerAvailableWidth,
+  ]);
+
+  useEffect(() => {
+    if (isActive) {
+      syncZoomState();
+      return;
+    }
+
+    zoomRef.current?.reset();
+  }, [isActive, syncZoomState]);
+
+  return (
+    <View style={[styles.viewerSlide, { width: windowWidth }]}>
+      <View
+        style={[
+          styles.viewerImageFrame,
+          { paddingBottom: bottomInset + space.xl },
+        ]}
+      >
+        <ImageZoom
+          ref={zoomRef}
+          isDoubleTapEnabled
+          maxScale={4}
+          minScale={1}
+          onInteractionEnd={syncZoomState}
+          onResetAnimationEnd={() => {
+            if (!isActive) {
+              return;
+            }
+
+            onZoomStateChange(false);
+          }}
+          resizeMode="contain"
+          style={[
+            styles.viewerImage,
+            {
+              height: viewerImageSize.height,
+              width: viewerImageSize.width,
+            },
+          ]}
+          uri={image.uri}
+        />
+      </View>
+    </View>
+  );
+}
+
 export function AddImageField({
   value,
   onChange,
@@ -157,11 +308,16 @@ export function AddImageField({
   const [isPicking, setIsPicking] = useState(false);
   const [gridWidth, setGridWidth] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
+  const [isViewerZoomed, setIsViewerZoomed] = useState(false);
   const [viewerImageDimensions, setViewerImageDimensions] = useState<
     Record<string, ImageDimensions>
   >({});
+  const activeImageIndexRef = useRef<number | null>(null);
+  const viewerReopenBlockedUntilRef = useRef(0);
+  const viewerListRef = useRef<FlatList<SelectedImage>>(null);
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const viewerTranslateY = useSharedValue(0);
   const isEditable = editable ?? Boolean(onChange);
   const showsRemoveButton = isEditable && (showRemoveButton ?? true);
   const resolvedMaxImages =
@@ -176,12 +332,6 @@ export function AddImageField({
     gridWidth > GRID_GAP * (GRID_COLUMNS - 1)
       ? (gridWidth - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS
       : 0;
-  const activeImage =
-    activeImageIndex === null ? null : images[activeImageIndex];
-  const activeImageResolvedDimensions = getImageDimensions(
-    activeImage,
-    activeImage ? (viewerImageDimensions[activeImage.id] ?? null) : null,
-  );
   const viewerAvailableWidth = Math.max(
     windowWidth - VIEWER_HORIZONTAL_PADDING * 2,
     0,
@@ -194,74 +344,84 @@ export function AddImageField({
       space.xl * 3,
     0,
   );
-  const viewerImageSize = getContainedImageSize(
-    activeImageResolvedDimensions,
-    viewerAvailableWidth,
-    viewerAvailableHeight,
+  const viewerBackdropAnimatedStyle = useAnimatedStyle(
+    () => ({
+      opacity: interpolate(
+        Math.abs(viewerTranslateY.value),
+        [0, VIEWER_DISMISS_DISTANCE * 1.5],
+        [1, 0.45],
+        Extrapolation.CLAMP,
+      ),
+    }),
+    [],
   );
+  const viewerContentAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: viewerTranslateY.value }],
+  }));
+
+  useEffect(() => {
+    if (activeImageIndex === null) {
+      activeImageIndexRef.current = null;
+      setIsViewerZoomed(false);
+      viewerTranslateY.value = 0;
+      return;
+    }
+
+    if (images.length === 0) {
+      activeImageIndexRef.current = null;
+      setActiveImageIndex(null);
+      return;
+    }
+
+    if (activeImageIndex > images.length - 1) {
+      const nextIndex = images.length - 1;
+
+      activeImageIndexRef.current = nextIndex;
+      setActiveImageIndex(nextIndex);
+      return;
+    }
+
+    activeImageIndexRef.current = activeImageIndex;
+  }, [activeImageIndex, images.length, viewerTranslateY]);
 
   useEffect(() => {
     if (activeImageIndex === null) {
       return;
     }
 
-    if (images.length === 0) {
-      setActiveImageIndex(null);
-      return;
-    }
-
-    if (activeImageIndex > images.length - 1) {
-      setActiveImageIndex(images.length - 1);
-    }
-  }, [activeImageIndex, images.length]);
-
-  useEffect(() => {
-    if (!activeImage) {
-      return;
-    }
-
-    if (activeImageResolvedDimensions || !activeImage.uri) {
-      return;
-    }
-
-    let isActive = true;
-
-    NativeImage.getSize(
-      activeImage.uri,
-      (width, height) => {
-        if (!isActive) {
-          return;
-        }
-
-        setViewerImageDimensions((current) => ({
-          ...current,
-          [activeImage.id]: { width, height },
-        }));
-      },
-      () => {
-        if (!isActive) {
-          return;
-        }
-
-        setViewerImageDimensions((current) => ({
-          ...current,
-          [activeImage.id]: {
-            width: viewerAvailableWidth || 1,
-            height: viewerAvailableHeight || 1,
-          },
-        }));
-      },
-    );
+    const frame = requestAnimationFrame(() => {
+      viewerListRef.current?.scrollToOffset({
+        animated: false,
+        offset: windowWidth * activeImageIndex,
+      });
+    });
 
     return () => {
-      isActive = false;
+      cancelAnimationFrame(frame);
     };
-  }, [
-    activeImage,
-    activeImageResolvedDimensions,
-    viewerAvailableHeight,
-    viewerAvailableWidth,
-  ]);
+  }, [activeImageIndex, windowWidth]);
+
+  const handleResolveViewerDimensions = useCallback(
+    (imageId: string, dimensions: ImageDimensions) => {
+      setViewerImageDimensions((current) => {
+        const existing = current[imageId];
+
+        if (
+          existing &&
+          existing.width === dimensions.width &&
+          existing.height === dimensions.height
+        ) {
+          return current;
+        }
+
+        return {
+          ...current,
+          [imageId]: dimensions,
+        };
+      });
+    },
+    [],
+  );
 
   function handleGridLayout(event: LayoutChangeEvent) {
     const nextWidth = Math.round(event.nativeEvent.layout.width);
@@ -328,12 +488,81 @@ export function AddImageField({
       return;
     }
 
+    if (Date.now() < viewerReopenBlockedUntilRef.current) {
+      return;
+    }
+
+    setIsViewerZoomed(false);
+    viewerTranslateY.value = 0;
+    activeImageIndexRef.current = index;
     setActiveImageIndex(index);
   }
 
   function handleCloseViewer() {
+    viewerReopenBlockedUntilRef.current =
+      Date.now() + VIEWER_REOPEN_COOLDOWN_MS;
+    activeImageIndexRef.current = null;
+    setIsViewerZoomed(false);
+    viewerTranslateY.value = 0;
     setActiveImageIndex(null);
   }
+
+  function handleViewerScrollEnd(
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) {
+    const currentActiveIndex = activeImageIndexRef.current;
+
+    if (windowWidth <= 0) {
+      return;
+    }
+
+    if (
+      currentActiveIndex === null ||
+      Date.now() < viewerReopenBlockedUntilRef.current
+    ) {
+      return;
+    }
+
+    const nextIndex = Math.round(
+      event.nativeEvent.contentOffset.x / windowWidth,
+    );
+
+    if (!images[nextIndex] || nextIndex === currentActiveIndex) {
+      return;
+    }
+
+    setIsViewerZoomed(false);
+    viewerTranslateY.value = 0;
+    activeImageIndexRef.current = nextIndex;
+    setActiveImageIndex(nextIndex);
+  }
+
+  const viewerDismissGesture = Gesture.Pan()
+    .enabled(activeImageIndex !== null && !isViewerZoomed)
+    .maxPointers(1)
+    .activeOffsetY([
+      -VIEWER_DISMISS_ACTIVE_OFFSET_Y,
+      VIEWER_DISMISS_ACTIVE_OFFSET_Y,
+    ])
+    .failOffsetX([-VIEWER_DISMISS_FAIL_OFFSET_X, VIEWER_DISMISS_FAIL_OFFSET_X])
+    .onUpdate((event) => {
+      viewerTranslateY.value = event.translationY;
+    })
+    .onEnd((event) => {
+      const shouldClose =
+        Math.abs(event.translationY) >= VIEWER_DISMISS_DISTANCE ||
+        Math.abs(event.velocityY) >= VIEWER_DISMISS_VELOCITY;
+
+      if (shouldClose) {
+        runOnJS(handleCloseViewer)();
+        return;
+      }
+
+      viewerTranslateY.value = withSpring(0, {
+        damping: 20,
+        stiffness: 220,
+      });
+    });
 
   function handleRemoveImage(imageId: string) {
     if (!isEditable || !onChange || disabled || isPicking) {
@@ -498,6 +727,10 @@ export function AddImageField({
       >
         <GestureHandlerRootView style={styles.viewerGestureRoot}>
           <View style={styles.viewerOverlay}>
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.viewerBackdrop, viewerBackdropAnimatedStyle]}
+            />
             <Pressable
               accessibilityHint="Closes the photo viewer"
               accessibilityLabel="Close photo viewer"
@@ -506,52 +739,68 @@ export function AddImageField({
               style={StyleSheet.absoluteFill}
             />
 
-            <SafeAreaView edges={['bottom']} style={styles.viewerSafeArea}>
-              <View
-                style={[
-                  styles.viewerTopBar,
-                  { paddingTop: insets.top + space.lg },
-                ]}
+            <GestureDetector gesture={viewerDismissGesture}>
+              <Animated.View
+                style={[styles.viewerContent, viewerContentAnimatedStyle]}
               >
-                <Pressable
-                  accessibilityHint="Closes the photo viewer"
-                  accessibilityLabel="Close photo viewer"
-                  accessibilityRole="button"
-                  hitSlop={space.sm}
-                  onPress={handleCloseViewer}
-                  style={({ pressed }) => [
-                    styles.viewerCloseButton,
-                    pressed ? styles.pressed : null,
-                  ]}
-                >
-                  <X color={baseColors.text} size={18} strokeWidth={2.25} />
-                </Pressable>
-              </View>
-
-              <View
-                style={[
-                  styles.viewerImageFrame,
-                  { paddingBottom: insets.bottom + space.xl },
-                ]}
-              >
-                {activeImage ? (
-                  <ImageZoom
-                    isDoubleTapEnabled
-                    maxScale={4}
-                    minScale={1}
-                    resizeMode="contain"
+                <SafeAreaView edges={['bottom']} style={styles.viewerSafeArea}>
+                  <View
                     style={[
-                      styles.viewerImage,
-                      {
-                        height: viewerImageSize.height,
-                        width: viewerImageSize.width,
-                      },
+                      styles.viewerTopBar,
+                      { paddingTop: insets.top + space.lg },
                     ]}
-                    uri={activeImage.uri}
+                  >
+                    <Pressable
+                      accessibilityHint="Closes the photo viewer"
+                      accessibilityLabel="Close photo viewer"
+                      accessibilityRole="button"
+                      hitSlop={space.sm}
+                      onPress={handleCloseViewer}
+                      style={({ pressed }) => [
+                        styles.viewerCloseButton,
+                        pressed ? styles.pressed : null,
+                      ]}
+                    >
+                      <X color={baseColors.text} size={18} strokeWidth={2.25} />
+                    </Pressable>
+                  </View>
+
+                  <FlatList
+                    ref={viewerListRef}
+                    data={images}
+                    getItemLayout={(_, index) => ({
+                      index,
+                      length: windowWidth,
+                      offset: windowWidth * index,
+                    })}
+                    horizontal
+                    keyExtractor={(image) => image.id}
+                    onMomentumScrollEnd={handleViewerScrollEnd}
+                    pagingEnabled
+                    removeClippedSubviews={false}
+                    renderItem={({ item, index }) => (
+                      <FullscreenViewerSlide
+                        bottomInset={insets.bottom}
+                        image={item}
+                        index={index}
+                        isActive={index === activeImageIndex}
+                        onResolveDimensions={handleResolveViewerDimensions}
+                        onZoomStateChange={setIsViewerZoomed}
+                        resolvedDimensions={
+                          viewerImageDimensions[item.id] ?? null
+                        }
+                        viewerAvailableHeight={viewerAvailableHeight}
+                        viewerAvailableWidth={viewerAvailableWidth}
+                        windowWidth={windowWidth}
+                      />
+                    )}
+                    scrollEnabled={!isViewerZoomed}
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.viewerPager}
                   />
-                ) : null}
-              </View>
-            </SafeAreaView>
+                </SafeAreaView>
+              </Animated.View>
+            </GestureDetector>
           </View>
         </GestureHandlerRootView>
       </Modal>
@@ -669,11 +918,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   viewerOverlay: {
+    flex: 1,
+  },
+  viewerBackdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(15, 13, 12, 0.96)',
+  },
+  viewerContent: {
     flex: 1,
   },
   viewerTopBar: {
     paddingHorizontal: space.lg,
+  },
+  viewerPager: {
+    flex: 1,
+  },
+  viewerSlide: {
+    flex: 1,
   },
   viewerCloseButton: {
     alignItems: 'center',
