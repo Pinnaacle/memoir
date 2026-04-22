@@ -3,6 +3,7 @@ import {
   type SelectedImage,
 } from '@/components/ui/AddImageField';
 import Divider from '@/components/ui/Divider';
+import PopoverMenu from '@/components/ui/PopoverMenu';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
 import {
@@ -23,7 +24,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -503,49 +503,22 @@ export default function MomentDetailScreen() {
         </Pressable>
       </View>
 
-      <Modal
-        animationType="fade"
-        onRequestClose={() => setIsMenuOpen(false)}
-        transparent
+      <PopoverMenu
+        items={[
+          {
+            label: 'Edit moment',
+            onPress: handleEdit,
+          },
+          {
+            label: deleteActionLabel,
+            onPress: handleDelete,
+            disabled: isMutatingMoment,
+            variant: 'danger',
+          },
+        ]}
+        onClose={() => setIsMenuOpen(false)}
         visible={isMenuOpen}
-      >
-        <View style={styles.menuOverlay}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setIsMenuOpen(false)}
-            style={styles.menuBackdrop}
-          />
-          <View style={styles.menuPanel}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={handleEdit}
-              style={({ pressed }) => [
-                styles.menuAction,
-                pressed ? styles.menuActionPressed : null,
-              ]}
-            >
-              <Text style={styles.menuActionText}>Edit moment</Text>
-            </Pressable>
-
-            <View style={styles.menuDivider} />
-
-            <Pressable
-              accessibilityRole="button"
-              disabled={isMutatingMoment}
-              onPress={handleDelete}
-              style={({ pressed }) => [
-                styles.menuAction,
-                pressed ? styles.menuActionPressed : null,
-                isMutatingMoment ? styles.menuActionDisabled : null,
-              ]}
-            >
-              <Text style={styles.menuActionDangerText}>
-                {deleteActionLabel}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      />
     </View>
   );
 }
@@ -699,49 +672,6 @@ const styles = StyleSheet.create({
     fontFamily: textTheme.family.medium,
     fontSize: textTheme.size.sm,
     lineHeight: textTheme.lineHeight.sm,
-  },
-  menuOverlay: {
-    flex: 1,
-  },
-  menuBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  menuPanel: {
-    backgroundColor: baseColors.bg,
-    borderColor: 'rgba(107, 101, 96, 0.16)',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    minWidth: 168,
-    overflow: 'hidden',
-    position: 'absolute',
-    right: space.lg,
-    top: space.lg + 84,
-  },
-  menuAction: {
-    paddingHorizontal: space.lg,
-    paddingVertical: space.md,
-  },
-  menuActionPressed: {
-    opacity: 0.82,
-  },
-  menuActionDisabled: {
-    opacity: 0.45,
-  },
-  menuActionText: {
-    color: baseColors.text,
-    fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  menuActionDangerText: {
-    color: baseColors.textError,
-    fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.sm,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  menuDivider: {
-    backgroundColor: 'rgba(107, 101, 96, 0.12)',
-    height: 1,
   },
   errorText: {
     color: baseColors.textError,
