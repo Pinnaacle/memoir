@@ -8,11 +8,12 @@ import Chip from '@/components/ui/Chip';
 import Divider from '@/components/ui/Divider';
 import { Field, Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
+import { useEntryForm } from '@/hooks/useEntryForm';
 import {
   useCreateEventMutation,
   useUpdateEventMutation,
 } from '@/hooks/useEvents';
-import { useImageUpload } from '@/hooks/useImageUpload';
+import { triggerSelectionFeedback } from '@/lib/interaction';
 import { MAX_IMAGES_PER_UPLOAD } from '@/lib/images';
 import {
   createEventSchema,
@@ -23,7 +24,7 @@ import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
 import { useForm } from '@tanstack/react-form';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -35,7 +36,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const SAVE_TIMEOUT_MS = 10000;
 const MOOD_OPTIONS = [
   'Magical',
   'Romantic',
@@ -53,47 +53,6 @@ export type EventFormProps = {
   isEdit: boolean;
 };
 
-function getUploadedPhotos(photos: SelectedImage[]) {
-  return photos
-    .filter(
-      (photo) =>
-        photo.uploadStatus === 'uploaded' && Boolean(photo.storagePath),
-    )
-    .slice(0, MAX_IMAGES_PER_UPLOAD)
-    .map((photo) => ({ storagePath: photo.storagePath! }));
-}
-
-function getFailedUploadMessage(uploadError: string | null) {
-  return uploadError
-    ? `Some photos failed to upload: ${uploadError}`
-    : 'Some photos failed to upload. Remove or retry them before saving.';
-}
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error
-    ? error.message
-    : 'Failed to save event. Please try again.';
-}
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      reject(new Error('Failed to save event. Please try again.'));
-    }, timeoutMs);
-
-    promise.then(
-      (value) => {
-        clearTimeout(timeoutId);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timeoutId);
-        reject(error);
-      },
-    );
-  });
-}
-
 export default function EventForm({
   activeGroupId,
   eventId,
@@ -101,47 +60,8 @@ export default function EventForm({
   initialValues,
   isEdit,
 }: EventFormProps) {
-  const [photos, setPhotos] = useState(initialPhotos);
-  const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const createEventMutation = useCreateEventMutation();
   const updateEventMutation = useUpdateEventMutation();
-  const { startUpload } = useImageUpload({
-    bucket: 'events',
-    setImages: setPhotos,
-  });
-  const isUploading = photos.some(
-    (photo) => photo.uploadStatus === 'uploading',
-  );
-  const failedUploads = photos.filter(
-    (photo) => photo.uploadStatus === 'failed',
-  );
-  const hasFailedUploads = failedUploads.length > 0;
-  const firstFailedUploadError =
-    failedUploads.find((photo) => Boolean(photo.uploadError))?.uploadError ??
-    null;
-  const uploadedPhotos = getUploadedPhotos(photos);
-  const retryUploadsDisabled = isUploading || isSaving;
-
-  const saveEvent = async (values: CreateEventValues, groupId: string) => {
-    if (isEdit && eventId) {
-      await updateEventMutation.mutateAsync({
-        ...values,
-        eventId,
-        groupId,
-        photos: uploadedPhotos,
-      });
-      return;
-    }
-
-    await createEventMutation.mutateAsync({
-      ...values,
-      groupId,
-      photos: uploadedPhotos,
-    });
-  };
-
   const form = useForm({
     defaultValues: initialValues,
     onSubmit: async ({ value }) => {
@@ -155,18 +75,41 @@ export default function EventForm({
         throw new Error('Choose a space before saving this event.');
       }
 
-      try {
-        await saveEvent(parsed.data, activeGroupId);
-      } catch (error) {
-        if (error instanceof Error) {
-          throw error;
-        }
-
-        throw new Error('Failed to save event. Please try again.');
+      if (isEdit && eventId) {
+        await updateEventMutation.mutateAsync({
+          ...parsed.data,
+          eventId,
+          groupId: activeGroupId,
+          photos: uploadedPhotos,
+        });
+        return;
       }
 
-      router.back();
+      await createEventMutation.mutateAsync({
+        ...parsed.data,
+        groupId: activeGroupId,
+        photos: uploadedPhotos,
+      });
     },
+  });
+  const {
+    failedUploads,
+    handleRetryFailedUploads,
+    handleSave,
+    hasTriedSubmit,
+    photos,
+    retryUploadsDisabled,
+    saveDisabled,
+    saveState,
+    setPhotos,
+    startUpload,
+    submitError,
+    uploadedPhotos,
+  } = useEntryForm({
+    bucket: 'events',
+    initialPhotos,
+    onSaved: () => router.back(),
+    saveErrorMessage: 'Failed to save event. Please try again.',
   });
 
   const validation = useMemo(
@@ -176,43 +119,6 @@ export default function EventForm({
   const fieldErrors = validation.success
     ? {}
     : validation.error.flatten().fieldErrors;
-  const submitError = saveError ?? form.state.errorMap.onSubmit;
-
-  const handleSave = async () => {
-    if (isSaving) {
-      return;
-    }
-
-    setHasTriedSubmit(true);
-    setSaveError(null);
-    if (!validation.success) {
-      return;
-    }
-
-    if (isUploading) {
-      setSaveError('Please wait for photos to finish uploading.');
-      return;
-    }
-
-    if (hasFailedUploads) {
-      setSaveError(getFailedUploadMessage(firstFailedUploadError));
-      return;
-    }
-
-    if (!activeGroupId) {
-      setSaveError('Choose a space before saving this event.');
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      await withTimeout(form.handleSubmit(), SAVE_TIMEOUT_MS);
-    } catch (error) {
-      setSaveError(getErrorMessage(error));
-      setIsSaving(false);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -223,7 +129,9 @@ export default function EventForm({
         <ModalTopBar
           color={sectionColors.events}
           onClose={() => router.back()}
-          onSave={handleSave}
+          onSave={() => void handleSave(validation.success, form.handleSubmit)}
+          saveDisabled={saveDisabled}
+          saveState={saveState}
           title={isEdit ? 'Edit Event' : 'New Event'}
         />
         <Divider color={sectionColors.events} />
@@ -294,7 +202,14 @@ export default function EventForm({
                         color={sectionColors.events}
                         isSelected={field.state.value === option}
                         label={option}
-                        setIsSelected={() => field.handleChange(option)}
+                        setIsSelected={() => {
+                          if (field.state.value === option) {
+                            return;
+                          }
+
+                          void triggerSelectionFeedback();
+                          field.handleChange(option);
+                        }}
                         style={styles.moodChip}
                       />
                     ))}
@@ -331,16 +246,13 @@ export default function EventForm({
               value={photos}
             />
 
-            {hasFailedUploads ? (
+            {failedUploads.length > 0 ? (
               <Pressable
                 accessibilityHint="Retries failed photo uploads"
                 accessibilityLabel="Retry failed uploads"
                 accessibilityRole="button"
                 disabled={retryUploadsDisabled}
-                onPress={() => {
-                  setSaveError(null);
-                  void startUpload(failedUploads);
-                }}
+                onPress={handleRetryFailedUploads}
                 style={({ pressed }) => [
                   styles.retryButton,
                   pressed ? styles.retryButtonPressed : null,
@@ -355,7 +267,7 @@ export default function EventForm({
               <Text style={styles.errorText}>{submitError}</Text>
             ) : null}
 
-            {isSaving ? (
+            {saveState === 'saving' ? (
               <View style={styles.submittingRow}>
                 <ActivityIndicator color={sectionColors.events} />
                 <Text style={styles.submittingText}>Saving event...</Text>
