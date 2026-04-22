@@ -1,111 +1,73 @@
 import { Card } from '@/components/ui/Card';
+import { Text } from '@/components/ui/Text';
+import { useActiveGroup } from '@/hooks/useActiveGroup';
+import { useTimelineItemsQuery } from '@/hooks/useTimelineItems';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
-import { Link } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
-interface MemoryItem {
-  id: number;
-  title: string;
-  date: string;
-  imageUrl: string;
-  description: string;
-  type?: string;
+import { type Href, Link } from 'expo-router';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+
+const FALLBACK_COVER_IMAGE = require('@/assets/images/fallbackImage.png');
+
+function formatOccurredOn(dateValue: string): string {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function resolveTimelineHref(item: {
+  kind?: 'event' | 'moment' | null;
+  sourceId?: string;
+}): Href | null {
+  if (!item.sourceId) {
+    return null;
+  }
+
+  if (item.kind === 'event') {
+    return `/events/${item.sourceId}` as Href;
+  }
+
+  if (item.kind === 'moment') {
+    return `/moments/${item.sourceId}` as Href;
+  }
+
+  return null;
 }
 
 export default function TimelineScreen() {
+  const {
+    activeGroup,
+    errorMessage: groupError,
+    isLoading: isLoadingGroups,
+  } = useActiveGroup();
+  const timelineQuery = useTimelineItemsQuery(activeGroup?.id);
   const pageColor = sectionColors.timeline;
-  const memories: MemoryItem[] = [
-    {
-      id: 1,
-      title: 'Beach Vacation',
-      date: 'June 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
-      description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      type: 'Special Moment',
-    },
-    {
-      id: 2,
-      title: 'Mountain Hike',
-      date: 'September 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=800&q=80',
-      description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      type: 'Special Moment',
-    },
-    {
-      id: 3,
-      title: 'City Exploration',
-      date: 'December 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=800&q=80',
-      description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      type: 'Special Moment',
-    },
-    {
-      id: 4,
-      title: 'Forest Camping',
-      date: 'April 2024',
-      imageUrl:
-        'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80',
-      description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      type: 'Special Moment',
-    },
-    {
-      id: 5,
-      title: 'Desert Road Trip',
-      date: 'August 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
-      description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      type: 'Special Moment',
-    },
-    {
-      id: 6,
-      title: 'Snowy Getaway',
-      date: 'January 2024',
-      imageUrl:
-        'https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=800&q=80',
-      description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      type: 'Special Moment',
-    },
-    {
-      id: 7,
-      title: 'Lakeside Retreat',
-      date: 'May 2024',
-      imageUrl:
-        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
-      description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      type: 'Special Moment',
-    },
-    {
-      id: 8,
-      title: 'Countryside Picnic',
-      date: 'July 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=800&q=80',
-      description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      type: 'Special Moment',
-    },
-    {
-      id: 9,
-      title: 'Urban Art Tour',
-      date: 'November 2023',
-      imageUrl:
-        'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=800&q=80',
-      description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      type: 'Special Moment',
-    },
-  ];
+  const timelineItems = timelineQuery.data ?? [];
+  const loadError =
+    groupError ??
+    (timelineQuery.error instanceof Error
+      ? timelineQuery.error.message
+      : timelineQuery.error
+        ? 'Failed to load timeline items.'
+        : null);
+  const activeGroupLabel =
+    activeGroup?.groupKind === 'personal'
+      ? 'Personal'
+      : (activeGroup?.name ?? 'this space');
 
   return (
     <ScrollView
@@ -116,22 +78,57 @@ export default function TimelineScreen() {
       <View style={styles.container}>
         <View style={styles.timeline}></View>
         <View style={[styles.memoriesContainer]}>
-          {memories.map((memory) => (
-            <View style={{ position: 'relative' }} key={memory.id}>
-              <View style={styles.indicator}></View>
-              <Link href={`/moments#${memory.id}`} asChild>
-                <Card
-                  variant="default"
-                  title={memory.title}
-                  date={memory.date}
-                  coverImage={memory.imageUrl}
-                  color={pageColor}
-                  description={memory.description}
-                  type={memory.type}
-                />
-              </Link>
-            </View>
-          ))}
+          {isLoadingGroups || timelineQuery.isPending ? (
+            <ActivityIndicator color={sectionColors.timeline} />
+          ) : null}
+
+          {!isLoadingGroups && !timelineQuery.isPending && loadError ? (
+            <Text style={styles.errorText}>{loadError}</Text>
+          ) : null}
+
+          {!isLoadingGroups &&
+          !timelineQuery.isPending &&
+          !loadError &&
+          timelineItems.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No timeline items in {activeGroupLabel} yet.
+            </Text>
+          ) : null}
+
+          {!isLoadingGroups && !timelineQuery.isPending && !loadError
+            ? timelineItems.map((item) => {
+                const href = resolveTimelineHref(item);
+                const card = (
+                  <Card
+                    variant="default"
+                    title={item.title}
+                    date={formatOccurredOn(item.occurredOn)}
+                    coverImage={item.coverImage ?? FALLBACK_COVER_IMAGE}
+                    color={pageColor}
+                    description={item.description}
+                    type={item.displayType}
+                  />
+                );
+
+                return (
+                  <View style={styles.itemWrap} key={item.id}>
+                    <View style={styles.indicator}></View>
+                    {href ? (
+                      <Link asChild href={href}>
+                        <Pressable
+                          accessibilityHint="Opens this timeline item"
+                          accessibilityRole="button"
+                        >
+                          {card}
+                        </Pressable>
+                      </Link>
+                    ) : (
+                      card
+                    )}
+                  </View>
+                );
+              })
+            : null}
         </View>
       </View>
     </ScrollView>
@@ -144,7 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: baseColors.bg,
   },
   content: {
-    paddingVertical: space.xl,
+    paddingBottom: space.xl,
     paddingHorizontal: space.xl,
   },
   timeline: {
@@ -180,4 +177,17 @@ const styles = StyleSheet.create({
     gap: space.lg,
     width: '100%',
   },
+  itemWrap: {
+    position: 'relative',
+    width: '100%',
+  },
+  emptyText: {
+    color: baseColors.textSoft,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: baseColors.textError,
+    textAlign: 'center',
+  },
+  link: {},
 });
