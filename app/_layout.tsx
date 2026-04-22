@@ -10,10 +10,10 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { Redirect, Stack, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { baseColors } from '../theme/colors';
 
@@ -40,7 +40,6 @@ export default function RootLayout() {
     isSignedIn: false,
     sessionReady: false,
   });
-  const segments = useSegments();
 
   useEffect(() => {
     let isMounted = true;
@@ -99,26 +98,6 @@ export default function RootLayout() {
     return null;
   }
 
-  const currentRootSegment = segments[0];
-  const inAuthFlow =
-    currentRootSegment === 'sign-in' || currentRootSegment === 'sign-up';
-  const isNotFoundRoute = currentRootSegment === '+not-found';
-
-  if (!authState.isSignedIn && !inAuthFlow && !isNotFoundRoute) {
-    return <Redirect href="/sign-in" />;
-  }
-
-  if (authState.isSignedIn && inAuthFlow) {
-    return <Redirect href="/(tabs)" />;
-  }
-
-  const detailScreenOptions = {
-    presentation: 'card' as const,
-    ...(Platform.OS === 'android'
-      ? { animation: 'slide_from_right' as const }
-      : null),
-  };
-
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
@@ -129,28 +108,15 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: baseColors.bg },
           }}
         >
-          <Stack.Screen name="sign-in" />
-          <Stack.Screen name="sign-up" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen
-            name="events/new"
-            options={{ presentation: 'modal' }}
-          />
-          <Stack.Screen
-            name="events/[id]"
-            options={detailScreenOptions}
-          />
-          <Stack.Screen
-            name="moments/new"
-            options={{
-              animation: 'slide_from_bottom',
-              presentation: 'modal',
-            }}
-          />
-          <Stack.Screen
-            name="moments/[id]"
-            options={detailScreenOptions}
-          />
+          <Stack.Protected guard={!authState.isSignedIn}>
+            <Stack.Screen name="sign-in" />
+            <Stack.Screen name="sign-up" />
+          </Stack.Protected>
+          <Stack.Protected guard={authState.isSignedIn}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="events" />
+            <Stack.Screen name="moments" />
+          </Stack.Protected>
           <Stack.Screen name="+not-found" />
         </Stack>
       </SafeAreaProvider>

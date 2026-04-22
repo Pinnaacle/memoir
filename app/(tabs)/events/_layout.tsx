@@ -1,15 +1,5 @@
-import { baseColors } from '@/theme/colors';
-import { Stack } from 'expo-router';
+import { Slot } from 'expo-router';
 
-export default function EventsLayout() {
-  return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: baseColors.bg },
-      }}
-    >
-      <Stack.Screen name="index" />
-    </Stack>
-  );
+export default function EventsTabLayout() {
+  return <Slot />;
 }
