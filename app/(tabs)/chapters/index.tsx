@@ -2,6 +2,7 @@ import { Card } from '@/components/ui/Card';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useChaptersQuery } from '@/hooks/useChapters';
+import { parseLocalDate } from '@/lib/date';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { space } from '@/theme/space';
 import { text } from '@/theme/type';
@@ -16,7 +17,7 @@ import {
 } from 'react-native';
 
 function formatOccurredOn(dateValue: string): string {
-  const date = new Date(dateValue);
+  const date = parseLocalDate(dateValue);
 
   if (Number.isNaN(date.getTime())) {
     return dateValue;

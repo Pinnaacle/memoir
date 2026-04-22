@@ -21,5 +21,5 @@ create index if not exists idx_chapter_items_ref
 -- Note: ref_id is a polymorphic pointer to public.moments.id or public.events.id.
 -- Foreign keys to those tables are intentionally omitted because a single column
 -- cannot reference two tables; callers are responsible for ensuring referenced
--- rows share the chapter's group_id. A follow-up migration can add triggers to
--- cascade deletes from moments/events if orphan items become a problem.
+-- rows share the chapter's group_id. Cascading deletes from moments/events are
+-- handled by triggers in a follow-up migration (20260422122000).

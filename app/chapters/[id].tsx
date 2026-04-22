@@ -2,6 +2,7 @@ import Divider from '@/components/ui/Divider';
 import { Text } from '@/components/ui/Text';
 import { useActiveGroup } from '@/hooks/useActiveGroup';
 import { useChapterDetailQuery } from '@/hooks/useChapters';
+import { parseLocalDate } from '@/lib/date';
 import type { ChapterDetailEntry } from '@/services/chapters';
 import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
@@ -25,7 +26,7 @@ import {
 const FALLBACK_COVER_IMAGE = require('../../assets/images/fallbackImage.png');
 
 function formatOccurredOn(dateValue: string): string {
-  const date = new Date(dateValue);
+  const date = parseLocalDate(dateValue);
   if (Number.isNaN(date.getTime())) {
     return dateValue;
   }
@@ -38,7 +39,7 @@ function formatOccurredOn(dateValue: string): string {
 }
 
 function formatShortDate(dateValue: string): string {
-  const date = new Date(dateValue);
+  const date = parseLocalDate(dateValue);
   if (Number.isNaN(date.getTime())) {
     return dateValue;
   }

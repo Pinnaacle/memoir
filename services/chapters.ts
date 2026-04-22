@@ -1,3 +1,4 @@
+import { toLocalDateString } from '@/lib/date';
 import { getSignedImageUrlMap } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 import {
@@ -402,7 +403,7 @@ export async function createChapter(
       title: input.title.trim(),
       chapter_type: input.chapterType.trim() || null,
       description: description.length > 0 ? description : null,
-      occurred_on: input.occurredAt.toISOString().slice(0, 10),
+      occurred_on: toLocalDateString(input.occurredAt),
     })
     .select('id')
     .single();
