@@ -76,7 +76,9 @@ export default function TimelineScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.container}>
-        <View style={styles.timeline}></View>
+        {!isLoadingGroups && !timelineQuery.isPending && !loadError ? (
+          <View style={styles.timeline}></View>
+        ) : null}
         <View style={[styles.memoriesContainer]}>
           {isLoadingGroups || timelineQuery.isPending ? (
             <ActivityIndicator color={sectionColors.timeline} />
