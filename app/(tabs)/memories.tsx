@@ -146,7 +146,9 @@ export default function MemoriesScreen() {
       />
 
       <View style={styles.container}>
-        <Text style={styles.title}>✦ {memories.length} memories ✦</Text>
+        {!isLoadingGroups && !memoryWallQuery.isPending && !loadError && (
+          <Text style={styles.title}>✦ {memories.length} memories ✦</Text>
+        )}
 
         {isLoadingGroups || memoryWallQuery.isPending ? (
           <ActivityIndicator color={sectionColors.memories} />
