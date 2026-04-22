@@ -112,9 +112,9 @@ export default function ChapterForm(props: ChapterFormProps) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(
     () => new Set(initialKeys),
   );
-  const [selectionOrder, setSelectionOrder] = useState<string[]>(
-    () => [...initialKeys],
-  );
+  const [selectionOrder, setSelectionOrder] = useState<string[]>(() => [
+    ...initialKeys,
+  ]);
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -143,10 +143,7 @@ export default function ChapterForm(props: ChapterFormProps) {
       );
     }
     for (const event of events) {
-      map.set(
-        makeItemKey('event', event.id),
-        toSelectableItem('event', event),
-      );
+      map.set(makeItemKey('event', event.id), toSelectableItem('event', event));
     }
     return map;
   }, [events, moments]);
