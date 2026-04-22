@@ -140,10 +140,10 @@ export function Select({
   const triggerTextColor = selectedOption
     ? baseColors.text
     : baseColors.textSoft;
-  const isCompactTrigger = size === 'compact' || size === 'header';
+  const isHeaderTrigger = size === 'header';
 
   return (
-    <View style={style}>
+    <View style={[size === 'header' ? styles.rootHeader : null, style]}>
       {label ? (
         <Text style={styles.fieldLabel}>
           {label}
@@ -177,9 +177,8 @@ export function Select({
         <Text
           numberOfLines={1}
           style={[
-            styles.triggerText,
-            isCompactTrigger ? styles.triggerTextCompact : null,
-            size === 'header' ? styles.triggerTextHeader : null,
+            isHeaderTrigger ? styles.triggerTextHeader : styles.triggerText,
+            size === 'compact' ? styles.triggerTextCompact : null,
             { color: triggerTextColor },
           ]}
         >
@@ -285,6 +284,9 @@ export function Select({
 }
 
 const styles = StyleSheet.create({
+  rootHeader: {
+    flexShrink: 1,
+  },
   fieldLabel: {
     color: baseColors.text,
     fontFamily: textTheme.family.semiBold,
@@ -308,11 +310,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
   },
   triggerHeader: {
+    alignSelf: 'flex-start',
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: radius.full,
+    flexShrink: 1,
+    justifyContent: 'flex-start',
+    maxWidth: 160,
     minHeight: 34,
-    maxWidth: 132,
-    minWidth: 88,
     paddingHorizontal: space.md,
   },
   triggerPressed: {
@@ -334,7 +338,12 @@ const styles = StyleSheet.create({
     marginRight: space.sm,
   },
   triggerTextHeader: {
+    flexShrink: 1,
     fontFamily: textTheme.family.semiBold,
+    fontSize: textTheme.size.sm,
+    lineHeight: textTheme.lineHeight.sm,
+    marginRight: space.sm,
+    minWidth: 0,
     textAlign: 'center',
   },
   modalRoot: {
