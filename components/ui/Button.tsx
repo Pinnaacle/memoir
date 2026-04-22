@@ -1,5 +1,5 @@
-import { baseColors } from '@/theme/colors';
 import { getSaveLabel, type SaveState } from '@/lib/interaction';
+import { baseColors } from '@/theme/colors';
 import { Plus } from 'lucide-react-native';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text } from './Text';
@@ -16,7 +16,7 @@ export default function Button({
   label,
   variant = 'default',
   color,
-  alignSelf,
+  alignSelf = 'center',
   disabled,
   saveState,
   onPress,
