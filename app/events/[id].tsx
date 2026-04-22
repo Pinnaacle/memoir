@@ -427,6 +427,7 @@ export default function EventDetailScreen() {
               maxImages={MAX_IMAGES_PER_UPLOAD}
               onChange={handlePhotoChange}
               onRequestUpload={startUpload}
+              showRemoveButton={false}
               value={photos}
             />
 

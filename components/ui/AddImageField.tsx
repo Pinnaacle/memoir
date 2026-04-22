@@ -3,29 +3,25 @@ import { baseColors, sectionColors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { space } from '@/theme/space';
 import { text as textTheme } from '@/theme/type';
+import { ImageZoom } from '@likashefqet/react-native-image-zoom';
 import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import {
-  AlertTriangle,
-  Camera,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  X,
-} from 'lucide-react-native';
+import { AlertTriangle, Camera, Plus, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   LayoutChangeEvent,
   Modal,
+  Image as NativeImage,
   Pressable,
-  ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
   type ViewProps,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -38,6 +34,13 @@ export type ImageUploadStatus = 'local' | 'uploading' | 'uploaded' | 'failed';
 const DEFAULT_MAX_IMAGES = MAX_IMAGES_PER_UPLOAD;
 const GRID_COLUMNS = 3;
 const GRID_GAP = space.md;
+const VIEWER_HORIZONTAL_PADDING = space.lg;
+const VIEWER_CLOSE_BUTTON_SIZE = 36;
+
+type ImageDimensions = {
+  width: number;
+  height: number;
+};
 
 export type SelectedImage = {
   id: string;
@@ -59,6 +62,7 @@ interface AddImageFieldProps extends ViewProps {
   label?: string;
   color?: string;
   editable?: boolean;
+  showRemoveButton?: boolean;
   allowsMultipleSelection?: boolean;
   maxImages?: number;
   disabled?: boolean;
@@ -94,12 +98,55 @@ function getNewImages(
   return pickedImages.filter((image) => !existingIds.has(image.id));
 }
 
+function getImageDimensions(
+  image: SelectedImage | null,
+  resolvedDimensions: ImageDimensions | null,
+): ImageDimensions | null {
+  if (!image) {
+    return null;
+  }
+
+  if (image.width && image.height) {
+    return {
+      width: image.width,
+      height: image.height,
+    };
+  }
+
+  return resolvedDimensions;
+}
+
+function getContainedImageSize(
+  dimensions: ImageDimensions | null,
+  maxWidth: number,
+  maxHeight: number,
+): ImageDimensions {
+  if (maxWidth <= 0 || maxHeight <= 0) {
+    return { width: 0, height: 0 };
+  }
+
+  if (!dimensions) {
+    return { width: maxWidth, height: maxHeight };
+  }
+
+  const scale = Math.min(
+    maxWidth / dimensions.width,
+    maxHeight / dimensions.height,
+  );
+
+  return {
+    width: dimensions.width * scale,
+    height: dimensions.height * scale,
+  };
+}
+
 export function AddImageField({
   value,
   onChange,
   label = 'Photos',
   color = sectionColors.events,
   editable,
+  showRemoveButton,
   allowsMultipleSelection = true,
   maxImages,
   disabled = false,
@@ -110,8 +157,13 @@ export function AddImageField({
   const [isPicking, setIsPicking] = useState(false);
   const [gridWidth, setGridWidth] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
+  const [viewerImageDimensions, setViewerImageDimensions] = useState<
+    Record<string, ImageDimensions>
+  >({});
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isEditable = editable ?? Boolean(onChange);
+  const showsRemoveButton = isEditable && (showRemoveButton ?? true);
   const resolvedMaxImages =
     maxImages ??
     (isEditable ? DEFAULT_MAX_IMAGES : value.length || DEFAULT_MAX_IMAGES);
@@ -126,9 +178,27 @@ export function AddImageField({
       : 0;
   const activeImage =
     activeImageIndex === null ? null : images[activeImageIndex];
-  const canGoBackward = activeImageIndex !== null && activeImageIndex > 0;
-  const canGoForward =
-    activeImageIndex !== null && activeImageIndex < images.length - 1;
+  const activeImageResolvedDimensions = getImageDimensions(
+    activeImage,
+    activeImage ? (viewerImageDimensions[activeImage.id] ?? null) : null,
+  );
+  const viewerAvailableWidth = Math.max(
+    windowWidth - VIEWER_HORIZONTAL_PADDING * 2,
+    0,
+  );
+  const viewerAvailableHeight = Math.max(
+    windowHeight -
+      insets.top -
+      insets.bottom -
+      VIEWER_CLOSE_BUTTON_SIZE -
+      space.xl * 3,
+    0,
+  );
+  const viewerImageSize = getContainedImageSize(
+    activeImageResolvedDimensions,
+    viewerAvailableWidth,
+    viewerAvailableHeight,
+  );
 
   useEffect(() => {
     if (activeImageIndex === null) {
@@ -144,6 +214,54 @@ export function AddImageField({
       setActiveImageIndex(images.length - 1);
     }
   }, [activeImageIndex, images.length]);
+
+  useEffect(() => {
+    if (!activeImage) {
+      return;
+    }
+
+    if (activeImageResolvedDimensions || !activeImage.uri) {
+      return;
+    }
+
+    let isActive = true;
+
+    NativeImage.getSize(
+      activeImage.uri,
+      (width, height) => {
+        if (!isActive) {
+          return;
+        }
+
+        setViewerImageDimensions((current) => ({
+          ...current,
+          [activeImage.id]: { width, height },
+        }));
+      },
+      () => {
+        if (!isActive) {
+          return;
+        }
+
+        setViewerImageDimensions((current) => ({
+          ...current,
+          [activeImage.id]: {
+            width: viewerAvailableWidth || 1,
+            height: viewerAvailableHeight || 1,
+          },
+        }));
+      },
+    );
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    activeImage,
+    activeImageResolvedDimensions,
+    viewerAvailableHeight,
+    viewerAvailableWidth,
+  ]);
 
   function handleGridLayout(event: LayoutChangeEvent) {
     const nextWidth = Math.round(event.nativeEvent.layout.width);
@@ -205,14 +323,6 @@ export function AddImageField({
     }
   }
 
-  function handleRemoveImage(imageId: string) {
-    if (!isEditable || !onChange || disabled || isPicking) {
-      return;
-    }
-
-    onChange(images.filter((image) => image.id !== imageId));
-  }
-
   function handleOpenViewer(index: number) {
     if (!images[index]) {
       return;
@@ -225,24 +335,12 @@ export function AddImageField({
     setActiveImageIndex(null);
   }
 
-  function handlePreviousImage() {
-    setActiveImageIndex((currentIndex) => {
-      if (currentIndex === null || currentIndex === 0) {
-        return currentIndex;
-      }
+  function handleRemoveImage(imageId: string) {
+    if (!isEditable || !onChange || disabled || isPicking) {
+      return;
+    }
 
-      return currentIndex - 1;
-    });
-  }
-
-  function handleNextImage() {
-    setActiveImageIndex((currentIndex) => {
-      if (currentIndex === null || currentIndex >= images.length - 1) {
-        return currentIndex;
-      }
-
-      return currentIndex + 1;
-    });
+    onChange(images.filter((image) => image.id !== imageId));
   }
 
   return (
@@ -350,9 +448,9 @@ export function AddImageField({
                 ) : null}
               </Pressable>
 
-              {isEditable ? (
+              {showsRemoveButton ? (
                 <Pressable
-                  accessibilityHint="Removes this photo from the event draft"
+                  accessibilityHint="Removes this photo"
                   accessibilityLabel={`Remove ${image.fileName ?? 'photo'}`}
                   accessibilityRole="button"
                   disabled={disabled || isPicking}
@@ -398,122 +496,64 @@ export function AddImageField({
         transparent
         visible={activeImageIndex !== null}
       >
-        <SafeAreaView edges={['bottom']} style={styles.viewerSafeArea}>
-          <View
-            style={[styles.viewerHeader, { paddingTop: insets.top + space.md }]}
-          >
+        <GestureHandlerRootView style={styles.viewerGestureRoot}>
+          <View style={styles.viewerOverlay}>
             <Pressable
               accessibilityHint="Closes the photo viewer"
               accessibilityLabel="Close photo viewer"
               accessibilityRole="button"
-              hitSlop={space.sm}
               onPress={handleCloseViewer}
-              style={({ pressed }) => [
-                styles.viewerHeaderButton,
-                pressed ? styles.pressed : null,
-              ]}
-            >
-              <X color={baseColors.text} size={18} strokeWidth={2.25} />
-            </Pressable>
+              style={StyleSheet.absoluteFill}
+            />
 
-            <Text style={styles.viewerCount}>
-              {activeImageIndex === null
-                ? ''
-                : `${activeImageIndex + 1} of ${images.length}`}
-            </Text>
-
-            <View style={styles.viewerHeaderSpacer} />
-          </View>
-
-          <View style={styles.viewerBody}>
-            {images.length > 1 ? (
-              <Pressable
-                accessibilityHint="Shows the previous photo"
-                accessibilityLabel="Previous photo"
-                accessibilityRole="button"
-                disabled={!canGoBackward}
-                onPress={handlePreviousImage}
-                style={({ pressed }) => [
-                  styles.viewerNavButton,
-                  !canGoBackward ? styles.disabled : null,
-                  pressed && canGoBackward ? styles.pressed : null,
+            <SafeAreaView edges={['bottom']} style={styles.viewerSafeArea}>
+              <View
+                style={[
+                  styles.viewerTopBar,
+                  { paddingTop: insets.top + space.lg },
                 ]}
               >
-                <ChevronLeft
-                  color={baseColors.text}
-                  size={22}
-                  strokeWidth={2.25}
-                />
-              </Pressable>
-            ) : (
-              <View style={styles.viewerNavSpacer} />
-            )}
-
-            <View style={styles.viewerImageFrame}>
-              {activeImage ? (
-                <Image
-                  source={{ uri: activeImage.uri }}
-                  style={styles.viewerImage}
-                  contentFit="contain"
-                />
-              ) : null}
-            </View>
-
-            {images.length > 1 ? (
-              <Pressable
-                accessibilityHint="Shows the next photo"
-                accessibilityLabel="Next photo"
-                accessibilityRole="button"
-                disabled={!canGoForward}
-                onPress={handleNextImage}
-                style={({ pressed }) => [
-                  styles.viewerNavButton,
-                  !canGoForward ? styles.disabled : null,
-                  pressed && canGoForward ? styles.pressed : null,
-                ]}
-              >
-                <ChevronRight
-                  color={baseColors.text}
-                  size={22}
-                  strokeWidth={2.25}
-                />
-              </Pressable>
-            ) : (
-              <View style={styles.viewerNavSpacer} />
-            )}
-          </View>
-
-          {images.length > 1 ? (
-            <ScrollView
-              contentContainerStyle={styles.viewerThumbnailContent}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-            >
-              {images.map((image, index) => (
                 <Pressable
-                  key={`${image.id}-viewer-thumb`}
-                  accessibilityHint="Shows this photo in the viewer"
-                  accessibilityLabel={`Open photo ${index + 1}`}
+                  accessibilityHint="Closes the photo viewer"
+                  accessibilityLabel="Close photo viewer"
                   accessibilityRole="button"
-                  onPress={() => handleOpenViewer(index)}
+                  hitSlop={space.sm}
+                  onPress={handleCloseViewer}
                   style={({ pressed }) => [
-                    styles.viewerThumbnail,
-                    activeImageIndex === index
-                      ? styles.viewerThumbnailActive
-                      : null,
+                    styles.viewerCloseButton,
                     pressed ? styles.pressed : null,
                   ]}
                 >
-                  <Image
-                    source={{ uri: image.uri }}
-                    style={styles.viewerThumbnailImage}
-                    contentFit="cover"
-                  />
+                  <X color={baseColors.text} size={18} strokeWidth={2.25} />
                 </Pressable>
-              ))}
-            </ScrollView>
-          ) : null}
-        </SafeAreaView>
+              </View>
+
+              <View
+                style={[
+                  styles.viewerImageFrame,
+                  { paddingBottom: insets.bottom + space.xl },
+                ]}
+              >
+                {activeImage ? (
+                  <ImageZoom
+                    isDoubleTapEnabled
+                    maxScale={4}
+                    minScale={1}
+                    resizeMode="contain"
+                    style={[
+                      styles.viewerImage,
+                      {
+                        height: viewerImageSize.height,
+                        width: viewerImageSize.width,
+                      },
+                    ]}
+                    uri={activeImage.uri}
+                  />
+                ) : null}
+              </View>
+            </SafeAreaView>
+          </View>
+        </GestureHandlerRootView>
       </Modal>
     </View>
   );
@@ -623,16 +663,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   viewerSafeArea: {
+    flex: 1,
+  },
+  viewerGestureRoot: {
+    flex: 1,
+  },
+  viewerOverlay: {
     backgroundColor: 'rgba(15, 13, 12, 0.96)',
     flex: 1,
   },
-  viewerHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  viewerTopBar: {
     paddingHorizontal: space.lg,
   },
-  viewerHeaderButton: {
+  viewerCloseButton: {
     alignItems: 'center',
     backgroundColor: 'rgba(245, 240, 236, 0.08)',
     borderColor: 'rgba(245, 240, 236, 0.16)',
@@ -642,64 +685,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 36,
   },
-  viewerCount: {
-    color: baseColors.text,
-    fontFamily: textTheme.family.medium,
-    fontSize: textTheme.size.md,
-    lineHeight: textTheme.lineHeight.sm,
-  },
-  viewerHeaderSpacer: {
-    width: 36,
-  },
-  viewerBody: {
+  viewerImageFrame: {
     alignItems: 'center',
     flex: 1,
-    flexDirection: 'row',
-    gap: space.sm,
-    paddingHorizontal: space.md,
-    paddingVertical: space.xl,
-  },
-  viewerImageFrame: {
-    flex: 1,
-    height: '100%',
     justifyContent: 'center',
+    paddingHorizontal: space.lg,
+    width: '100%',
   },
   viewerImage: {
-    flex: 1,
-    width: '100%',
-  },
-  viewerNavButton: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 240, 236, 0.08)',
-    borderColor: 'rgba(245, 240, 236, 0.16)',
-    borderRadius: radius.full,
-    borderWidth: 1,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  viewerNavSpacer: {
-    width: 40,
-  },
-  viewerThumbnailContent: {
-    gap: space.sm,
-    paddingHorizontal: space.lg,
-    paddingBottom: space.lg,
-  },
-  viewerThumbnail: {
-    borderColor: 'transparent',
-    borderRadius: radius.md,
-    borderWidth: 2,
-    height: 64,
-    overflow: 'hidden',
-    width: 64,
-  },
-  viewerThumbnailActive: {
-    borderColor: baseColors.text,
-  },
-  viewerThumbnailImage: {
-    height: '100%',
-    width: '100%',
+    backgroundColor: 'transparent',
   },
   pressed: {
     opacity: 0.82,

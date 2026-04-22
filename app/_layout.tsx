@@ -14,6 +14,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { baseColors } from '../theme/colors';
 
@@ -99,53 +100,55 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: baseColors.bg },
-          }}
-        >
-          <Stack.Protected guard={!authState.isSignedIn}>
-            <Stack.Screen name="sign-in" />
-            <Stack.Screen name="sign-up" />
-          </Stack.Protected>
-          <Stack.Protected guard={authState.isSignedIn}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen
-              name="events/new"
-              options={{
-                animation: 'slide_from_bottom',
-                presentation: 'modal',
-              }}
-            />
-            <Stack.Screen
-              name="events/[id]"
-              options={{
-                animation: 'slide_from_right',
-                presentation: 'card',
-              }}
-            />
-            <Stack.Screen
-              name="moments/new"
-              options={{
-                animation: 'slide_from_bottom',
-                presentation: 'modal',
-              }}
-            />
-            <Stack.Screen
-              name="moments/[id]"
-              options={{
-                animation: 'slide_from_right',
-                presentation: 'card',
-              }}
-            />
-          </Stack.Protected>
-          <Stack.Screen name="+not-found" />
-        </Stack>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <StatusBar style="light" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: baseColors.bg },
+            }}
+          >
+            <Stack.Protected guard={!authState.isSignedIn}>
+              <Stack.Screen name="sign-in" />
+              <Stack.Screen name="sign-up" />
+            </Stack.Protected>
+            <Stack.Protected guard={authState.isSignedIn}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen
+                name="events/new"
+                options={{
+                  animation: 'slide_from_bottom',
+                  presentation: 'modal',
+                }}
+              />
+              <Stack.Screen
+                name="events/[id]"
+                options={{
+                  animation: 'slide_from_right',
+                  presentation: 'card',
+                }}
+              />
+              <Stack.Screen
+                name="moments/new"
+                options={{
+                  animation: 'slide_from_bottom',
+                  presentation: 'modal',
+                }}
+              />
+              <Stack.Screen
+                name="moments/[id]"
+                options={{
+                  animation: 'slide_from_right',
+                  presentation: 'card',
+                }}
+              />
+            </Stack.Protected>
+            <Stack.Screen name="+not-found" />
+          </Stack>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
