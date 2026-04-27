@@ -175,6 +175,7 @@ export function AddImageField({
     setIsPicking(true);
 
     try {
+      // Using Expo's ImagePicker component
       const picked = await pickImagesFromLibrary({
         allowsMultipleSelection: allowsMultipleSelection && slotsLeft > 1,
         selectionLimit: slotsLeft,
