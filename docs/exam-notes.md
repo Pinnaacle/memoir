@@ -60,7 +60,7 @@ Cut anything that does not directly support the five exam requirements.
 
 Use this architecture sentence:
 
-> I keep the Expo Router pages focused on navigation and screen wiring, components focused on mobile UI, hooks focused on state and mutations, and services focused on Supabase and native image work.
+> I keep the Expo Router screens focused on navigation and screen wiring, components focused on mobile UI, hooks focused on state and mutations, and services focused on Supabase and native image work.
 
 Use this data sentence:
 
@@ -96,46 +96,37 @@ Key point:
 
 ## Data ERD Overview
 
-Use this simplified ERD when explaining the Supabase data model:
+Use this simplified table view when explaining the Supabase data model:
 
 ```mermaid
 erDiagram
   GROUPS {
-    uuid id PK
+    uuid id
     text name
-    group_kind group_kind
+    string ...
   }
 
   MOMENTS {
-    uuid id PK
-    uuid group_id FK
+    uuid id
+    uuid group_id
     text title
-    date occurred_on
+    string ...
   }
 
   PHOTOS {
-    uuid id PK
-    uuid group_id FK
+    uuid id
+    uuid group_id
     text storage_path
-    timestamp taken_at
-  }
-
-  MOMENT_PHOTOS {
-    uuid group_id PK, FK
-    uuid moment_id PK, FK
-    uuid photo_id PK, FK
-    int sort_order
+    string ...
   }
 
   GROUPS ||--o{ MOMENTS : scopes
   GROUPS ||--o{ PHOTOS : scopes
-  MOMENTS ||--o{ MOMENT_PHOTOS : has
-  PHOTOS ||--o{ MOMENT_PHOTOS : attached_as
 ```
 
 Key point:
 
-> The Moment row and the image file are not the same thing. `moments` stores the memory, `photos` stores image metadata and the Storage path, and `moment_photos` connects them in order. `group_id` appears across the feature so each Moment and photo stays inside the selected Space. The actual JPEG lives in the Supabase Storage bucket, while `photos.storage_path` stores the object path used to create signed URLs.
+> The Moment row and the image file are not the same thing. `moments` stores the memory, `photos` stores image metadata and the Storage path, and `group_id` appears across the feature so each Moment and photo stays inside the selected Space. The actual JPEG lives in the Supabase Storage bucket, while `photos.storage_path` stores the object path used to create signed URLs.
 
 Mention briefly, but do not put in the diagram:
 
@@ -159,7 +150,157 @@ Mention only if needed:
 - `app/(tabs)/moments/index.tsx` - proves `router.push('/moments/new')` and detail navigation
 - `components/ui/FullscreenImageViewer.tsx` - contains the swipe-to-dismiss and zoom implementation
 - `lib/images.ts` - contains the private bucket and signed URL helper
-- `app.json` - contains the ImagePicker permission config
+
+## Opdaterede Tale-kort
+
+### Tale-kort 1: Intro og kerneapp
+
+Jamen, velkommen til Memoir, som er en React Native-app bygget med Expo. Appen handler om at gemme personlige eller delte minder i det, vi kalder Spaces eller groups.
+
+Et Space kan være personligt eller delt, og indholdet bliver scoped til det valgte Space. Så brugeren arbejder hele tiden i en bestemt kontekst.
+
+Hvis vi kigger på appen helt overordnet, har vi flere typer indhold: Timeline, hvor tingene samles, og så Moments, Events, Chapters og Memories.
+
+I den her gennemgang fokuserer jeg på Moments, fordi det er et godt eksempel til at vise både appens funktionalitet, native mobile experience, routing, code implementation og backend.
+
+Jeg starter med det overordnede setup og strukturen i appen, og så viser jeg selve Moments-flowet bagefter.
+
+### Tale-kort 2: Routing og navigation
+
+Kode at vise:
+
+- `app/_layout.tsx:133` - `Stack.Screen name="moments/new"`
+- `app/(tabs)/_layout.tsx:70` - `Tabs`
+- `app/(tabs)/moments/index.tsx:81` - `handleNavigate`, `router.push`
+
+Routing er bygget med Expo Router, hvor filstrukturen i `app`-mappen definerer vores routes.
+
+I vores root layout bruger vi Stack navigation til de overordnede flows.
+
+Inde i `(tabs)` ligger de faste hovedsektioner: Timeline, Moments, Events, Chapters og Memories.
+
+`moments/new` og `moments/[id]` ligger uden for `(tabs)` og ejes derfor af Root Stack.
+
+Det er et bevidst valg, fordi brugeren ikke skal føle, at create og detail bare er endnu en tab-side.
+
+De kan stadig åbnes fra Moments, men vises uden bottom tab bar og fælles tab header. Så tabs bruges til de faste områder, mens create og detail får et mere fokuseret native-style flow.
+
+```mermaid
+flowchart TD
+  Root["Root Stack"]
+  Tabs["(tabs)"]
+  Timeline["Timeline"]
+  Moments["Moments"]
+  Events["Events"]
+  Chapters["Chapters"]
+  Memories["Memories"]
+  New["moments/new"]
+  Detail["moments/[id]"]
+
+  Root --> Tabs
+  Tabs --> Timeline
+  Tabs --> Moments
+  Tabs --> Events
+  Tabs --> Chapters
+  Tabs --> Memories
+  Root --> New
+  Root --> Detail
+  Moments ~~~ New
+  Moments ~~~ Detail
+```
+
+### Tale-kort 3: Data og backend
+
+Kode at vise:
+
+- `components/MomentForm.tsx:110` - `submitMoment`
+- `hooks/useMoments.ts:198` - `useCreateMomentMutation`
+- `services/moments.ts:259` - `createMoment`
+
+Data-flowet er delt op i layers: screen binder navigation sammen, UI components håndterer forms og billeder, hooks styrer state og mutations, og services taler med Supabase.
+
+Supabase bruges til Auth, Database og Storage. Den aktive Space bestemmer `group_id`, så Moments og billeder bliver scoped til den rigtige Space.
+
+Billedfilen ligger i Storage. Databasen gemmer Momentet og photo metadata, blandt andet `storage_path`.
+
+```mermaid
+erDiagram
+  GROUPS {
+    uuid id
+    text name
+    string ...
+  }
+
+  MOMENTS {
+    uuid id
+    uuid group_id
+    text title
+    string ...
+  }
+
+  PHOTOS {
+    uuid id
+    uuid group_id
+    text storage_path
+    string ...
+  }
+
+  GROUPS ||--o{ MOMENTS : scopes
+  GROUPS ||--o{ PHOTOS : scopes
+```
+
+Pointen er, at UI'et ikke behøver kende detaljerne om Supabase. Det får data gennem hooks, mens services håndterer backend logic.
+
+```mermaid
+flowchart LR
+  Service["service"]
+  Hook["hook"]
+  UI["UI"]
+  Screen["screen"]
+
+  Service --> Hook --> UI --> Screen
+```
+
+### Tale-kort 4: Demo af Moments
+
+Nu viser jeg det samme flow i appen.
+
+Jeg starter i Moments for den valgte Space, trykker på plus-knappen og kommer til `moments/new`.
+
+Her udfylder jeg type, titel, dato og beskrivelse.
+
+Når jeg vælger et billede, bruger appen Expo ImagePicker. Det betyder, at den åbner systemets egen photo picker, altså en native UI component, i stedet for en klassisk web file input.
+
+Efter billedet er valgt, får brugeren et preview med det samme. Billedet kan også åbnes i en fullscreen viewer med modal presentation, safe-area handling og gestures.
+
+Her kan man bruge swipe-to-dismiss, hvor distance og velocity afgør, om vieweren lukker eller springer tilbage med en animation. Billedvisningen understøtter også pinch-to-zoom og double-tap zoom.
+
+Så i demoen viser jeg både native UI, gestures og animationer, som følger mobilkonventioner.
+
+Når Momentet gemmes, bliver Moment-data gemt i databasen, billedmetadata gemmes i `photos`, og billedfilen ligger i Storage. Bagefter kan vi se Momentet i listen eller åbne det i detail view.
+
+### Tale-kort 5: Implementering i kode
+
+Kode at vise:
+
+- `components/MomentForm.tsx:110` - `submitMoment`
+- `components/ui/AddImageField.tsx:151` - `handleAddImages`
+- `hooks/useImageUpload.ts:66` - `startUpload`
+- `services/imageUpload.ts:61` - `uploadEntityImage`
+
+I koden følger jeg samme opdeling som i data-flowet: screen, component, hook og service.
+
+`MomentForm` samler formularens values og submitter kun billeder, der allerede har fået en `storagePath`.
+
+`AddImageField` håndterer image UI'et: picker, preview og fullscreen viewer.
+
+`useImageUpload` styrer upload state, så et billede kan være `local`, `uploading`, `uploaded` eller `failed`.
+
+`imageUpload` servicen komprimerer billedet med Expo ImageManipulator og uploader filen til Supabase Storage.
+
+Til sidst bruger `createMoment` i `services/moments.ts` de færdig-uploadede `storagePath`s til at oprette Momentet og gemme photo metadata.
+
+Så screen og components viser flowet, hooks styrer state, og services håndterer Supabase og file upload.
 
 ## 5-Minute Structure
 
@@ -193,7 +334,7 @@ Explain:
 - `(tabs)` contains the main app sections.
 - `moments/new` is presented as a modal with `slide_from_bottom`.
 - `moments/[id]` is a detail route with card-style navigation.
-- `new` and `[id]` pages live outside `(tabs)`, so they do not inherit the bottom tab bar or tab header.
+- `new` and `[id]` screens live outside `(tabs)`, so they do not inherit the bottom tab bar or tab header.
 - The Moments list uses `router.push('/moments/new')` and `router.push('/moments/[id]')`; mention this, but only open the list file if you have time.
 
 Say:
@@ -213,47 +354,33 @@ Explain:
 - The active Space gives the current `group_id`.
 - `moments` stores the Moment.
 - `photos` stores image metadata and `storage_path`.
-- `moment_photos` connects Moments and photos with `sort_order`.
+- photos are attached to Moments on the backend side.
 - The actual JPEG lives in Supabase Storage.
 
 Say:
 
 > Before the demo, this is the data model behind the flow. The database stores rows and relations, while Storage stores the actual image file.
 
-### 1:45-2:35 - Moment Demo
+### 1:45-3:15 - Moment Demo And Native Mobile Experience
 
-Show the full feature flow:
+Show the full feature flow and explain the native parts while they happen:
 
 1. Open Moments in the selected Space.
 2. Tap `+`.
 3. Fill type, title, date and description.
-4. Pick a photo.
-5. Save.
-6. Show the Moment in list or detail view.
+4. Pick a photo through the system photo picker.
+5. Open the fullscreen viewer.
+6. Show swipe-to-dismiss, pinch-to-zoom or double-tap zoom.
+7. Save.
+8. Show the Moment in list or detail view.
 
 Say:
 
-> This is the flow I will use for the technical explanation: local user input, native image picking, upload to Storage and database writes in Supabase.
+> This flow covers both app in action and native mobile experience: local user input, Expo ImagePicker, fullscreen modal viewing, gestures, upload to Storage and database writes in Supabase.
 
-### 2:35-3:20 - Native Mobile Experience
+### 3:15-5:00 - Implementation In Code
 
-Show:
-
-- `components/ui/AddImageField.tsx`
-- optionally `components/ui/FullscreenImageViewer.tsx`
-
-Explain:
-
-- `ImagePicker.launchImageLibraryAsync` opens the system photo picker.
-- The image grid shows preview, loading and error states.
-- The fullscreen viewer uses a React Native `Modal`, safe-area handling, gestures and zoom.
-- Swipe-to-dismiss uses distance and velocity.
-
-Say:
-
-> The image flow is where the app feels most native: the user gets the platform photo picker, fullscreen viewing, gestures and zoom instead of a web-style file input.
-
-### 3:20-4:45 - Implementation In Code
+Show only the central code path:
 
 Show:
 
@@ -269,23 +396,11 @@ Explain the flow:
 2. `AddImageField` creates local image objects from ImagePicker results.
 3. `useImageUpload` changes each image between `local`, `uploading`, `uploaded` and `failed`.
 4. `uploadEntityImage` compresses the image and uploads it to Storage.
-5. `createMoment` writes the Moment row, photo metadata and relation rows.
+5. `createMoment` writes the Moment row and photo metadata, while Storage handles the file.
 
 Say:
 
 > The screen does not do everything itself. Components handle UI, hooks handle state and flow, and services handle Supabase and file upload.
-
-### 4:45-5:00 - Reflection
-
-End with technical reflection, not another file.
-
-Say:
-
-> The main challenge was coordinating native image selection, upload state, compression and database writes without putting everything into one large component.
-
-> The important design choice is the split between Storage and database: Storage handles the file, and the database handles the Moment, metadata and relations.
-
-> `group_id` ties the whole flow to the selected Space, so personal and shared content stay separated.
 
 ## 24-Hour Work Plan
 
@@ -352,8 +467,8 @@ Keep these four points and cut everything else:
 
 - Expo Router: protected Stack, tabs, modal create screen and detail route.
 - Native UX: ImagePicker, image compression, safe areas, haptics and gestures.
-- Supabase: `moments`, `photos`, `moment_photos`, Storage and signed URLs.
-- Architecture: page -> component -> hook -> service.
+- Supabase: `moments`, `photos`, Storage and signed URLs.
+- Architecture: screen -> component -> hook -> service.
 
 ## Short Version To Memorize
 
