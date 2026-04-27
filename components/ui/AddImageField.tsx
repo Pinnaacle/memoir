@@ -212,7 +212,7 @@ export function AddImageField({
         {canAddMore ? (
           <Pressable
             accessibilityHint="Opens your photo library"
-            accessibilityLabel={`Add a photo to ${label.toLowerCase()}`}
+            accessibilityLabel={`Add a photo to ${label}`}
             accessibilityRole="button"
             disabled={isDisabled}
             hitSlop={space.sm}
