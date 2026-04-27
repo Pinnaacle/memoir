@@ -1,354 +1,370 @@
-# Exam Notes: Moments, Spaces and Image Upload
+# CPAT Exam Notes: 5-minute screencast plan
 
-## Exam Context
+## Exact Exam Frame
 
-The exam is a **24-hour home assignment** from **Monday 12:00 to Tuesday 12:00**.
+The exam is a **24-hour home assignment**:
 
-The exact requirements are released in Wiseflow when the exam starts, so this document is a preparation guide, not a final submission checklist. When the assignment is released, compare its wording against this plan and adjust the screencast focus if needed.
+- Start: Monday, April 27, 2026 at 12:00
+- Deadline: Tuesday, April 28, 2026 at 12:00
+- Delivery: individual screencast video, maximum **5 minutes**
+- Upload: Wiseflow, preferably `.mp4`
 
-Expected delivery:
+The video is assessed on academic communication:
 
-- A screencast, maximum **5 minutes**
-- Uploaded in Wiseflow as `.mp4` or similar
+- correct terminology
+- technical overview
+- understanding of the implementation
+- clear and coherent explanation
 
-The screencast should normally cover:
+Visual polish, effects, transitions and editing style are not weighted.
 
-- Demo of the app running on a device or simulator
-- Code walkthrough of selected features
-- How the app uses Supabase data
-- Reflection on technical choices and challenges
+The video must cover these five areas:
 
-Important exam framing:
+1. App in action
+2. Native mobile experience
+3. Routing and navigation
+4. Implementation in code
+5. Data and backend
 
-- The goal is to show understanding, not to make a polished production.
-- Choose a small, focused feature rather than trying to show the entire app.
-- Show only the files and flows that support the explanation.
-- It is okay to mention related features briefly, but the main walkthrough should stay narrow.
+## Main Angle
 
-## Main Feature
+Use **Moments with image upload inside a selected Space** as the main example.
 
-Use **Moments with image upload inside a selected Space** as the feature for the 5-minute screencast.
+This is still the strongest feature because it hits every exam requirement:
 
-This is the strongest exam angle because it shows:
+- **App in action:** create a Moment in a Space and attach a photo.
+- **Native mobile experience:** Expo ImagePicker, safe areas, modal flow, haptics and image gestures.
+- **Routing/navigation:** tabs for main sections, stack routes for modal create screens and detail screens.
+- **Implementation:** form state, upload state, React Query mutations, services and components.
+- **Data/backend:** Supabase Auth, Database, Storage, `group_id` scoping and signed image URLs.
 
-- React Native and Expo UI patterns
-- Expo native APIs for image picking and image processing
-- Supabase Auth, Database and Storage
-- Space-based data scoping with `group_id`
-- React Query mutations, cache updates and invalidation
+Keep the overall app framing simple:
 
-## Why This Feature Fits The Exam
+> Memoir is a React Native memory app for saving personal or shared memories in Spaces. It has Timeline, Moments, Events, Chapters and Memories, but in this video I focus on Moments because it shows the complete flow from mobile UI to Supabase.
 
-Moments is a good exam feature because it is small enough to explain in 5 minutes, but broad enough to show the important technical parts of the app.
+Avoid using Chapters as the main feature, because it is less clearly your strongest individual implementation angle. Events can be a backup, but Moments has the cleaner image-upload story.
 
-It covers the likely assessment areas:
+## What To Cut
 
-- **App demo:** create a moment, select a photo and view it afterward.
-- **Code understanding:** form state, upload hook, service layer and query/mutation flow.
-- **Supabase:** database tables, Storage uploads and signed image URLs.
-- **Expo/React Native:** native image picker, image compression, haptics, safe areas and mobile UI patterns.
-- **Reflection:** tradeoffs around separating files from metadata, and scoping data by Space.
+Cut anything that does not directly support the five exam requirements.
 
-Avoid focusing on Chapters for the main walkthrough, because that was not your own feature. It can be mentioned only if the exam specifically asks for broader app functionality.
+- Do not make 2-3 slides. At most use one quick visual note for the architecture/data flow if it helps you speak.
+- Do not explain the whole app screen by screen.
+- Do not open every file involved in the feature.
+- Do not spend more than 20-30 seconds in the Supabase dashboard.
+- Do not explain edit/delete flows unless the prompt or timing forces it.
+- Do not spend time on visual design choices unless they support native mobile UX.
+- Do not introduce new features during the exam window. Fix only blockers.
 
-Events can be used as a backup because it has a similar architecture, but Moments is better for a compact technical explanation because it has a clear image-upload story and optimistic/cache logic.
+## Core Explanation
 
-## Architecture Angle
+Use this architecture sentence:
 
-Use the walkthrough to show a simple React Native/Expo architecture:
+> I keep the Expo Router pages focused on navigation and screen wiring, components focused on mobile UI, hooks focused on state and mutations, and services focused on Supabase and native image work.
 
-```text
-service -> hook -> component -> page
+Use this data sentence:
+
+> The actual image file goes to Supabase Storage, while the database stores the Moment row, the photo metadata and the relation between them.
+
+Use this Space sentence:
+
+> The active Space decides the current `group_id`, so Moments and image paths stay scoped to either a personal or shared space.
+
+## Routing Overview
+
+Use this focused graph when explaining navigation:
+
+```mermaid
+flowchart TD
+  Root["app/_layout.tsx<br/>Root Stack"]
+  Auth["sign-in / sign-up"]
+  Tabs["(tabs)<br/>Bottom nav + shared header"]
+  TabScreens["Timeline, Moments, Events,<br/>Chapters, Memories"]
+  NewScreens["new screens<br/>/moments/new, /events/new, /chapters/new"]
+  DetailScreens["[id] screens<br/>/moments/[id], /events/[id], /chapters/[id]"]
+
+  Root --> Auth
+  Root --> Tabs
+  Tabs --> TabScreens
+  Root --> NewScreens
+  Root --> DetailScreens
 ```
 
-Explain it bottom-up:
+Key point:
 
-- **Service:** talks to Supabase, Storage and Expo image processing.
-- **Hook:** connects services to React Query, upload state and cache updates.
-- **Component:** renders mobile UI and calls the hook from user actions.
-- **Page:** Expo Router screen that chooses what feature state to show.
+> The tabs are only for the main browsing sections. The `new` and `[id]` screens live outside `(tabs)`, so the root Stack can present them without the bottom nav and shared tab header. That makes create screens feel like native modals and detail screens feel like focused drill-down views.
 
-Say:
+## Data ERD Overview
 
-> I keep routes and components focused on mobile UI, hooks focused on state and mutations, and services focused on Supabase and native image work. That makes the feature easier to explain and easier to test.
+Use this simplified ERD when explaining the Supabase data model:
 
-This fits the course because Expo Router pages are not the whole app. They are the screen layer on top of reusable components, hooks and service functions.
+```mermaid
+erDiagram
+  GROUPS {
+    uuid id PK
+    text name
+    group_kind group_kind
+  }
 
-Do not explain it like enterprise architecture. Keep it practical: "this separation keeps my screen files shorter and keeps Supabase code out of the UI."
+  MOMENTS {
+    uuid id PK
+    uuid group_id FK
+    text title
+    date occurred_on
+  }
 
-## Slide And Code Rhythm
+  PHOTOS {
+    uuid id PK
+    uuid group_id FK
+    text storage_path
+    timestamp taken_at
+  }
 
-Use 2-3 simple slides between code sections:
+  MOMENT_PHOTOS {
+    uuid group_id PK, FK
+    uuid moment_id PK, FK
+    uuid photo_id PK, FK
+    int sort_order
+  }
 
-1. **Feature slide:** Moments in a selected Space with image upload.
-2. **Architecture slide:** `service -> hook -> component -> page`.
-3. **Data slide:** Storage file + `photos` metadata + `moment_photos` relation.
+  GROUPS ||--o{ MOMENTS : scopes
+  GROUPS ||--o{ PHOTOS : scopes
+  MOMENTS ||--o{ MOMENT_PHOTOS : has
+  PHOTOS ||--o{ MOMENT_PHOTOS : attached_as
+```
 
-The slides should be visual pauses, not lectures. Use them to reset the viewer before jumping into code.
+Key point:
 
-Code tabs to keep open:
+> The Moment row and the image file are not the same thing. `moments` stores the memory, `photos` stores image metadata and the Storage path, and `moment_photos` connects them in order. `group_id` appears across the feature so each Moment and photo stays inside the selected Space. The actual JPEG lives in the Supabase Storage bucket, while `photos.storage_path` stores the object path used to create signed URLs.
 
-- `services/moments.ts`
-- `services/imageUpload.ts`
-- `hooks/useImageUpload.ts`
-- `components/ui/AddImageField.tsx`
-- `components/MomentForm.tsx`
-- `app/moments/new.tsx`
+Mention briefly, but do not put in the diagram:
 
-Avoid opening more files unless the exam prompt specifically asks for them.
+- `profiles` connects rows to the signed-in Supabase Auth user through `created_by` and `uploaded_by`.
+- `group_members` controls which users can access a Space through RLS policies.
+
+## Files To Have Ready
+
+Keep the visible code set small. Open these files first:
+
+1. `app/_layout.tsx`
+2. `app/(tabs)/_layout.tsx`
+3. `components/MomentForm.tsx`
+4. `components/ui/AddImageField.tsx`
+5. `hooks/useImageUpload.ts`
+6. `services/imageUpload.ts`
+7. `services/moments.ts`
+
+Mention only if needed:
+
+- `app/(tabs)/moments/index.tsx` - proves `router.push('/moments/new')` and detail navigation
+- `components/ui/FullscreenImageViewer.tsx` - contains the swipe-to-dismiss and zoom implementation
+- `lib/images.ts` - contains the private bucket and signed URL helper
+- `app.json` - contains the ImagePicker permission config
 
 ## 5-Minute Structure
 
-### 0:00-0:30 - Demo
+### 0:00-0:30 - Intro And Core App
 
-Show the app running in Expo on simulator/device.
-
-Demo flow:
-
-1. Open Moments.
-2. Show the active Space.
-3. Tap create moment.
-4. Fill in type, title, date and description.
-5. Add a photo.
-6. Save and show the moment in the list/detail screen.
-
-Say:
-
-> I am showing Moments because it covers the most important technical layers in the app: mobile UI, native image picking, Supabase Storage, database writes and Space scoping.
-
-Exam tip:
-
-Do not spend too long typing during the recording. Prepare sample text beforehand or use short values.
-
-### 0:30-1:00 - Architecture Slide
-
-Show the architecture slide:
-
-```text
-service -> hook -> component -> page
-```
-
-Say:
-
-> The feature is split into four small layers. Services handle Supabase and image processing, hooks handle state and mutations, components handle native UI, and Expo Router pages wire the screen together.
-
-Key point:
-
-This is the main technical decision. It keeps React Native UI separate from Supabase calls and makes the code easier to walk through quickly.
-
-### 1:00-1:35 - Space Context
+Show the app running on simulator or device, but do not do the full Moment demo yet.
 
 Show:
 
-- `hooks/useActiveGroup.ts`
-- `components/GroupScopePicker.tsx`
-
-Key point:
-
-> Spaces define the current `group_id`. That `group_id` is used when fetching moments, saving moments and uploading images, so the app can separate content between personal and shared spaces.
-
-Exam tip:
-
-This is where you show that the app is not just local UI. The selected Space changes which data the user works with.
-
-### 1:35-2:15 - Page And Form
-
-Show:
-
-- `app/moments/new.tsx`
-- `components/MomentForm.tsx`
-
-Key points:
-
-- The Expo Router page loads edit/create state and passes `activeGroupId` into the form.
-- The form validates the values, waits for uploads and sends clean input to the mutation.
-- `KeyboardAvoidingView`, `ScrollView` and safe-area handling are mobile-specific UI choices.
+- the selected Space
+- the main tabs: Timeline, Moments, Events, Chapters and Memories
+- Moments as the feature you will focus on
 
 Say:
 
-> This screen is not doing the Supabase work directly. The page and form collect user input, then pass clean data into the hook layer.
+> Memoir is a React Native app built with Expo. It is for saving personal or shared memories in Spaces. I focus on Moments because it gives a compact example of the app flow, routing, native mobile experience, code implementation and backend.
 
-Exam tip:
+Keep this short. The real demo comes after routing and data.
 
-Do not explain every input. Show the `onSubmit` block and the `AddImageField` usage only.
+### 0:30-1:10 - Routing And Navigation
 
-### 2:15-3:20 - Native Image And Upload Hook
+Show the routing graph and file tree briefly, then open:
+
+- `app/_layout.tsx`
+- `app/(tabs)/_layout.tsx`
+- optionally `app/(tabs)/moments/index.tsx`
+
+Explain:
+
+- The root `Stack` protects signed-in and signed-out routes.
+- `(tabs)` contains the main app sections.
+- `moments/new` is presented as a modal with `slide_from_bottom`.
+- `moments/[id]` is a detail route with card-style navigation.
+- `new` and `[id]` pages live outside `(tabs)`, so they do not inherit the bottom tab bar or tab header.
+- The Moments list uses `router.push('/moments/new')` and `router.push('/moments/[id]')`; mention this, but only open the list file if you have time.
+
+Say:
+
+> Tabs fit the main sections because users move between Timeline, Moments, Events, Chapters and Memories. Create and detail screens are outside the tab folder, so the root Stack can present them as focused native flows without the bottom navigation or shared tab header.
+
+### 1:10-1:45 - Data And Backend
+
+Show:
+
+- the Data ERD overview
+- `services/moments.ts`
+
+Explain:
+
+- Supabase handles Auth, Database and Storage.
+- The active Space gives the current `group_id`.
+- `moments` stores the Moment.
+- `photos` stores image metadata and `storage_path`.
+- `moment_photos` connects Moments and photos with `sort_order`.
+- The actual JPEG lives in Supabase Storage.
+
+Say:
+
+> Before the demo, this is the data model behind the flow. The database stores rows and relations, while Storage stores the actual image file.
+
+### 1:45-2:35 - Moment Demo
+
+Show the full feature flow:
+
+1. Open Moments in the selected Space.
+2. Tap `+`.
+3. Fill type, title, date and description.
+4. Pick a photo.
+5. Save.
+6. Show the Moment in list or detail view.
+
+Say:
+
+> This is the flow I will use for the technical explanation: local user input, native image picking, upload to Storage and database writes in Supabase.
+
+### 2:35-3:20 - Native Mobile Experience
 
 Show:
 
 - `components/ui/AddImageField.tsx`
-- `hooks/useImageUpload.ts`
-- `services/imageUpload.ts`
-- `app.json`
+- optionally `components/ui/FullscreenImageViewer.tsx`
 
-Key points:
+Explain:
 
-- `expo-image-picker` opens the native photo picker.
-- `expo-image-manipulator` compresses images before upload.
-- `useImageUpload` marks images as `uploading`, `uploaded` or `failed`.
-- Uploads use the active Space so Storage paths match `group_id`.
-- App config includes the `expo-image-picker` plugin with a photo-library permission message.
-- Camera and microphone permissions are disabled because this feature only selects existing photos.
+- `ImagePicker.launchImageLibraryAsync` opens the system photo picker.
+- The image grid shows preview, loading and error states.
+- The fullscreen viewer uses a React Native `Modal`, safe-area handling, gestures and zoom.
+- Swipe-to-dismiss uses distance and velocity.
 
 Say:
 
-> This is a cross-platform app, but image picking is still a native feature. Expo gives me one API while still using the system photo picker on each platform.
+> The image flow is where the app feels most native: the user gets the platform photo picker, fullscreen viewing, gestures and zoom instead of a web-style file input.
 
-Exam tip:
-
-This is the most important React Native/Expo section. Show only `handleAddImages`, `startUpload` and `uploadEntityImage`.
-
-### 3:20-4:25 - Supabase Data Slide And Service
+### 3:20-4:45 - Implementation In Code
 
 Show:
 
-- `services/moments.ts`
-- `lib/images.ts`
+- `submitMoment` in `components/MomentForm.tsx`
+- `handleAddImages` in `components/ui/AddImageField.tsx`
+- `startUpload` in `hooks/useImageUpload.ts`
+- `uploadEntityImage` in `services/imageUpload.ts`
+- `createMoment` in `services/moments.ts`
 
-Data flow:
+Explain the flow:
 
-1. The file is uploaded to Supabase Storage.
-2. The moment is inserted into `moments`.
-3. Photo metadata is inserted into `photos`.
-4. The relation and order are inserted into `moment_photos`.
-5. Private images are read through signed URLs.
-
-Key point:
-
-> Files and metadata are separated. Storage handles the image file, while the database handles the moment and its relationship to photos.
-
-Exam tip:
-
-Show the service function, not every React Query cache update. Mention React Query briefly as the hook layer that calls the service and refreshes the UI.
-
-### 4:25-5:00 - Reflection
+1. `MomentForm` validates the form and submits uploaded `storagePath`s.
+2. `AddImageField` creates local image objects from ImagePicker results.
+3. `useImageUpload` changes each image between `local`, `uploading`, `uploaded` and `failed`.
+4. `uploadEntityImage` compresses the image and uploads it to Storage.
+5. `createMoment` writes the Moment row, photo metadata and relation rows.
 
 Say:
 
-> A technical challenge was coordinating native image selection, compression, upload state and database writes. I solved that by separating the upload hook, form hook and Supabase service layer.
+> The screen does not do everything itself. Components handle UI, hooks handle state and flow, and services handle Supabase and file upload.
 
-> Another important choice was Space scoping. The active Space is used consistently for both database rows and Storage paths, which makes the data model easier to reason about.
+### 4:45-5:00 - Reflection
 
-> Since the app is cross-platform, I also added native-specific polish: safe-area positioning, touch-friendly 44x44 buttons, haptics and explicit ImagePicker permission configuration.
+End with technical reflection, not another file.
 
-Exam tip:
+Say:
 
-End with a reflection, not another code file. This makes the screencast feel complete.
+> The main challenge was coordinating native image selection, upload state, compression and database writes without putting everything into one large component.
+
+> The important design choice is the split between Storage and database: Storage handles the file, and the database handles the Moment, metadata and relations.
+
+> `group_id` ties the whole flow to the selected Space, so personal and shared content stay separated.
 
 ## 24-Hour Work Plan
 
-When the exam opens:
+Use the time for clarity, not production polish.
 
-1. Read the Wiseflow assignment carefully and mark any exact requirements.
-2. Check whether it asks for a specific type of feature or reflection.
-3. If the requirements allow free choice, use Moments as planned.
-4. If it asks for broader app architecture, keep Moments as the main example and mention Events/Spaces briefly.
-5. Run the app and create one clean demo dataset before recording.
-6. Run `npm run lint` and `npx tsc --noEmit`.
-7. Record a rough take early. Do not wait until the last hour.
-8. Re-record only if the first version is unclear or over 5 minutes.
-9. Upload the final `.mp4` to Wiseflow with time to spare.
+1. Read the assignment PDF and mark the five exact requirements.
+2. Confirm that Moments is still the best central feature.
+3. Run the app and verify sign-in, Space selection, Moment creation and image picking.
+4. Fix only blocking issues.
+5. Prepare one clean demo Space, one demo image and short text values.
+6. Open only the files listed above.
+7. Run `npm run lint`.
+8. Run `npx tsc --noEmit`.
+9. Record one rough take early.
+10. Re-record only if the video is unclear or over 5 minutes.
+11. Check audio, screen readability, video length and file format.
+12. Upload to Wiseflow before the deadline.
 
 Suggested time allocation:
 
-- 12:00-13:00: Read assignment, decide final angle, make small adjustments if needed.
-- 13:00-15:00: Verify app flow and fix only blocking issues.
-- 15:00-17:00: Prepare demo data and final code tabs/files.
-- 17:00-19:00: Record first screencast attempt.
-- Evening: Re-record if needed and check file format/length.
-- Next morning: Final review and upload before deadline.
+- 12:00-12:30: Read prompt and adjust this plan.
+- 12:30-14:00: Verify app flow and fix blockers.
+- 14:00-15:00: Prepare demo data, image and file tabs.
+- 15:00-16:00: Practice the 5-minute script with a timer.
+- 16:00-18:00: Record first full take.
+- Evening: Re-record only if needed.
+- Next morning: Final check and upload before 12:00.
 
 ## Recording Checklist
 
 Before recording:
 
-- App runs in simulator/device.
+- App runs on simulator or device.
 - You are signed in.
 - A Space is selected.
-- You have at least one image ready to pick.
-- Slides are ready: feature, architecture and data model.
-- Editor tabs are open for the exact files in the slide/code rhythm section.
-- Supabase tab is ready if you want to show backend tables/storage.
-- Notifications and noisy apps are closed.
-- Screencast timer is visible or you have a timer nearby.
+- A test image is ready in the photo library.
+- Demo text is prepared.
+- Code tabs are open in the planned order.
+- Supabase dashboard is ready only if you want a quick backend visual.
+- Notifications are closed.
+- Timer is visible or nearby.
 
 During recording:
 
+- Name the requirement you are covering as you move through the video.
+- Say what you are showing before switching file.
 - Keep the demo short.
-- Use slides to explain structure, then code to prove it.
-- Say what you are showing before switching files.
-- Do not scroll through huge files without naming the important function.
-- Skip any code that does not support the service-hook-component-page story.
-- If something small goes wrong, explain it calmly instead of restarting immediately.
+- Use code to prove the explanation, not to read every line.
+- Skip anything that does not support Moments, native UX, routing or Supabase.
+- If something minor goes wrong, explain calmly and continue.
 - Stop before 5 minutes.
 
 After recording:
 
-- Check length is under 5 minutes.
-- Check audio is understandable.
-- Check code text is readable enough.
-- Export/upload as `.mp4` or an accepted similar format.
+- Length is under 5 minutes.
+- Audio is understandable.
+- Code text is readable.
+- The video includes app demo, native UX, routing/navigation, implementation and backend.
+- File is exported as `.mp4` or another accepted Wiseflow format.
 
-## Files To Mention
+## If Timing Gets Tight
 
-Primary walkthrough files:
+Keep these four points and cut everything else:
 
-- `services/moments.ts` - database rows and photo relations
-- `services/imageUpload.ts` - Expo image compression and Storage upload
-- `hooks/useImageUpload.ts` - upload state and active Space context
-- `components/ui/AddImageField.tsx` - native image picker UI
-- `components/MomentForm.tsx` - form submit and uploaded photo paths
-- `app/moments/new.tsx` - Expo Router page wiring
-
-Mention only if needed:
-
-- `app/(tabs)/moments/index.tsx` - Moments list and create button
-- `app/moments/[id].tsx` - detail screen and photo editing
-- `hooks/useMoments.ts` - React Query cache updates
-- `lib/images.ts` - signed URLs for private Storage images
-- `app.json` - ImagePicker permission config
-
-## If The Exam Prompt Changes
-
-If the prompt says "show data from Supabase":
-
-- Emphasize `services/moments.ts`, `photos`, `moment_photos` and signed URLs.
-
-If the prompt says "show a feature you built":
-
-- Emphasize Moments, Events and Spaces. Do not center Chapters.
-
-If the prompt says "technical choices":
-
-- Emphasize Expo native APIs, React Query, service layer separation and Storage/database split.
-
-If the prompt says "challenges":
-
-- Use image upload coordination, Space scoping and cross-platform UI as the main challenges.
-
-If the prompt asks for improvements:
-
-- Mention native permission config, safe-area positioning and touch target polish as small best-practice improvements made before the exam.
+- Expo Router: protected Stack, tabs, modal create screen and detail route.
+- Native UX: ImagePicker, image compression, safe areas, haptics and gestures.
+- Supabase: `moments`, `photos`, `moment_photos`, Storage and signed URLs.
+- Architecture: page -> component -> hook -> service.
 
 ## Short Version To Memorize
 
-> I chose Moments because it shows the full mobile data flow in a focused way. The user selects a Space, creates a Moment, picks a photo through Expo's native image picker, the image is compressed and uploaded to Supabase Storage, and the metadata is saved in Supabase tables. React Query keeps the UI responsive with mutations and cache updates, and private images are displayed with signed URLs.
-
-## Backup If Time Is Tight
-
-If the video runs long, skip deep explanation of edit/delete and only mention:
-
-- active Space as `group_id`
-- Expo ImagePicker and ImageManipulator
-- Supabase tables: `moments`, `photos`, `moment_photos`
-- Supabase Storage signed URLs
-- React Query mutation/cache flow
+> I chose Moments because it shows the complete mobile data flow in a focused way. The user selects a Space, creates a Moment, picks a photo through Expo's native image picker, the image is compressed and uploaded to Supabase Storage, and metadata is saved in Supabase tables. Expo Router handles tabs, modal create screens and detail screens, while React Query keeps the UI responsive through mutations, optimistic updates and invalidation.
 
 ## Things To Avoid
 
-- Do not try to explain the whole app.
-- Do not use Chapters as the main feature unless the assignment forces it.
-- Do not spend more than 30-40 seconds on Supabase UI.
+- Do not explain the whole app.
+- Do not center Chapters unless the assignment unexpectedly requires it.
+- Do not spend more than 20-30 seconds in Supabase UI.
+- Do not scroll through huge files without naming the function you are showing.
 - Do not explain every line of code.
-- Do not introduce new risky features during the 24-hour exam unless the prompt requires it.
-- Do not worry about making the video highly produced. Clarity matters more.
+- Do not add risky new features during the exam.
+- Do not worry about high production value. Clarity and terminology matter more.

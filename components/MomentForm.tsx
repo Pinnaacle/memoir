@@ -86,38 +86,6 @@ export default function MomentForm({
 }: MomentFormProps) {
   const createMomentMutation = useCreateMomentMutation();
   const updateMomentMutation = useUpdateMomentMutation();
-  const form = useForm({
-    defaultValues: initialValues,
-    onSubmit: async ({ value }) => {
-      const parsed = createMomentSchema.safeParse(value);
-
-      if (!parsed.success) {
-        throw new Error(parsed.error.issues[0]?.message ?? 'Invalid input.');
-      }
-
-      if (!activeGroupId) {
-        throw new Error('Choose a space before saving this moment.');
-      }
-
-      // Uploads are done here; the mutation gets values and Storage paths.
-      const input: CreateMomentMutationInput = {
-        ...parsed.data,
-        groupId: activeGroupId,
-        optimistic: getOptimisticMomentData(photos),
-        photos: uploadedPhotos,
-      };
-
-      if (isEdit && momentId) {
-        await updateMomentMutation.mutateAsync({
-          momentId,
-          ...input,
-        });
-        return;
-      }
-
-      await createMomentMutation.mutateAsync(input);
-    },
-  });
   const {
     failedUploads,
     handleRetryFailedUploads,
@@ -137,6 +105,40 @@ export default function MomentForm({
     initialPhotos,
     onSaved: () => router.back(),
     saveErrorMessage: 'Failed to save moment. Please try again.',
+  });
+
+  async function submitMoment(value: CreateMomentValues) {
+    const parsed = createMomentSchema.safeParse(value);
+
+    if (!parsed.success) {
+      throw new Error(parsed.error.issues[0]?.message ?? 'Invalid input.');
+    }
+
+    if (!activeGroupId) {
+      throw new Error('Choose a space before saving this moment.');
+    }
+
+    const input: CreateMomentMutationInput = {
+      ...parsed.data,
+      groupId: activeGroupId,
+      optimistic: getOptimisticMomentData(photos),
+      photos: uploadedPhotos,
+    };
+
+    if (isEdit && momentId) {
+      await updateMomentMutation.mutateAsync({
+        momentId,
+        ...input,
+      });
+      return;
+    }
+
+    await createMomentMutation.mutateAsync(input);
+  }
+
+  const form = useForm({
+    defaultValues: initialValues,
+    onSubmit: ({ value }) => submitMoment(value),
   });
 
   const validation = useMemo(
