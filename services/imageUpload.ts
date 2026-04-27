@@ -23,7 +23,6 @@ type UploadImageArgs = {
 };
 
 const COMPRESSED_MAX_EDGE = 1600;
-const COMPRESSED_QUALITY = 0.75;
 const COMPRESSED_EXTENSION = 'jpg';
 const COMPRESSED_MIME = 'image/jpeg';
 
@@ -93,7 +92,7 @@ export async function uploadEntityImage(
 
   const renderedImage = await manipulator.renderAsync();
   const compressedImage = await renderedImage.saveAsync({
-    compress: COMPRESSED_QUALITY,
+    compress: 0.75,
     format: SaveFormat.JPEG,
   });
 
