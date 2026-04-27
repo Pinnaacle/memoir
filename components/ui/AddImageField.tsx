@@ -320,13 +320,13 @@ export function AddImageField({
   const viewerTranslateY = useSharedValue(0);
   const isEditable = editable ?? Boolean(onChange);
   const showsRemoveButton = isEditable && (showRemoveButton ?? true);
-  const resolvedMaxImages =
+  const limit =
     maxImages ??
     (isEditable ? DEFAULT_MAX_IMAGES : value.length || DEFAULT_MAX_IMAGES);
-  const images = value.slice(0, resolvedMaxImages);
+  const images = value.slice(0, limit);
   const imageCount = value.length;
-  const remainingSlots = Math.max(resolvedMaxImages - images.length, 0);
-  const canAddMore = isEditable && remainingSlots > 0;
+  const slotsLeft = Math.max(limit - images.length, 0);
+  const canAddMore = isEditable && slotsLeft > 0;
   const isDisabled = disabled || isPicking || !isEditable;
   const itemSize =
     gridWidth > GRID_GAP * (GRID_COLUMNS - 1)
@@ -439,7 +439,7 @@ export function AddImageField({
     if (!canAddMore) {
       Alert.alert(
         'Photo limit reached',
-        `You can attach up to ${resolvedMaxImages} photos.`,
+        `You can attach up to ${limit} photos.`,
       );
       return;
     }
@@ -447,30 +447,27 @@ export function AddImageField({
     setIsPicking(true);
 
     try {
+      // Expo returns local file URIs; the upload hook stores them in Supabase.
       const result = await ImagePicker.launchImageLibraryAsync({
-        allowsMultipleSelection: allowsMultipleSelection && remainingSlots > 1,
+        allowsMultipleSelection: allowsMultipleSelection && slotsLeft > 1,
         mediaTypes: ['images'],
         quality: 1,
-        selectionLimit: remainingSlots,
+        selectionLimit: slotsLeft,
       });
 
       if (result.canceled || !result.assets?.length) {
         return;
       }
 
-      const pickedImages = result.assets.map(createSelectedImage);
-      const newImages = getNewImages(images, pickedImages).slice(
-        0,
-        remainingSlots,
-      );
+      const picked = result.assets.map(createSelectedImage);
+      const added = getNewImages(images, picked).slice(0, slotsLeft);
 
-      if (newImages.length === 0) {
+      if (added.length === 0) {
         return;
       }
 
-      const nextImages = [...images, ...newImages];
-      onChange(nextImages);
-      onRequestUpload?.(newImages);
+      onChange([...images, ...added]);
+      onRequestUpload?.(added);
     } catch {
       Alert.alert(
         'Could not open photos',

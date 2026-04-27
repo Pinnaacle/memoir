@@ -206,7 +206,6 @@ function Modal({
 }) {
   const href = selectedMemory ? resolveMemoryHref(selectedMemory) : null;
 
-  console.log('Selected Memory:', selectedMemory);
   return (
     <ExpoModal
       animationType="fade"

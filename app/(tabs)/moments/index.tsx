@@ -16,6 +16,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FALLBACK_COVER_IMAGE = require('@/assets/images/fallbackImage.png');
 
@@ -46,6 +47,7 @@ function formatMomentType(value: string | null): string {
 }
 
 export default function MomentsScreen() {
+  const insets = useSafeAreaInsets();
   const {
     activeGroup,
     errorMessage: groupError,
@@ -147,11 +149,14 @@ export default function MomentsScreen() {
         </View>
       </ScrollView>
       <Pressable
+        accessibilityHint="Opens the new moment form"
+        accessibilityLabel="Create moment"
         accessibilityRole="button"
         disabled={isNavigating}
         onPress={() => handleNavigate('/moments/new')}
         style={({ pressed }) => [
           styles.createButton,
+          { bottom: Math.max(insets.bottom + space.lg, space.lg + space.xs) },
           pressed ? styles.cardPressed : null,
           isNavigating ? styles.createButtonDisabled : null,
         ]}
@@ -207,17 +212,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: sectionColors.moments,
     borderRadius: 999,
-    bottom: 20,
     height: 60,
     width: 60,
     justifyContent: 'center',
     position: 'absolute',
     right: space.xl,
-    shadowColor: baseColors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 4,
+    boxShadow: `0px 8px 18px 0px ${baseColors.shadow}`,
   },
   createButtonDisabled: {
     opacity: 0.55,

@@ -267,7 +267,7 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
     throw new Error('A group must be selected before creating a moment.');
   }
 
-  const { data: insertedMoment, error: momentError } = await supabase
+  const { data: moment, error: momentError } = await supabase
     .from('moments')
     .insert({
       group_id: input.groupId,
@@ -281,32 +281,33 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
     throw new Error(momentError.message);
   }
 
-  if (!insertedMoment?.id) {
+  if (!moment?.id) {
     throw new Error('Could not create moment.');
   }
 
   const storagePaths = normalizePhotoPaths(input.photos);
 
   if (storagePaths.length === 0) {
-    return insertedMoment.id;
+    return moment.id;
   }
 
-  const insertedPhotoIds = await insertPhotos(
+  // Files live in Storage; metadata and order live in photos and moment_photos.
+  const photoIds = await insertPhotos(
     input.groupId,
     userId,
     input.occurredAt,
     storagePaths,
   );
 
-  if (insertedPhotoIds.size === 0) {
-    return insertedMoment.id;
+  if (photoIds.size === 0) {
+    return moment.id;
   }
 
   const { error: linksError } = await supabase.from('moment_photos').insert(
     storagePaths.map((storagePath, index) => ({
       group_id: input.groupId,
-      moment_id: insertedMoment.id,
-      photo_id: insertedPhotoIds.get(storagePath)!,
+      moment_id: moment.id,
+      photo_id: photoIds.get(storagePath)!,
       sort_order: index,
     })),
   );
@@ -315,7 +316,7 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
     throw new Error(linksError.message);
   }
 
-  return insertedMoment.id;
+  return moment.id;
 }
 
 export async function updateMoment(input: UpdateMomentInput): Promise<string> {

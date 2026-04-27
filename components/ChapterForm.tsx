@@ -124,8 +124,8 @@ export default function ChapterForm(props: ChapterFormProps) {
   const momentsQuery = useMomentsQuery(activeGroupId ?? undefined);
   const eventsQuery = useEventsQuery(activeGroupId ?? undefined);
 
-  const moments = momentsQuery.data ?? [];
-  const events = eventsQuery.data ?? [];
+  const moments = useMemo(() => momentsQuery.data ?? [], [momentsQuery.data]);
+  const events = useMemo(() => eventsQuery.data ?? [], [eventsQuery.data]);
   const isLoadingItems = momentsQuery.isPending || eventsQuery.isPending;
   const itemsLoadError =
     momentsQuery.error instanceof Error
