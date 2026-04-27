@@ -74,11 +74,11 @@ Hvis vi kigger på appen helt overordnet, har vi flere typer indhold: Timeline, 
 
 I den her gennemgang fokuserer jeg på Moments, fordi det er et godt eksempel til at vise både appens funktionalitet, native mobile experience, routing, code implementation og backend.
 
-Jeg starter med det overordnede setup og strukturen i appen, og så viser jeg selve Moments-flowet bagefter.
+Inden jeg viser selve Moment-flowet, starter jeg med navigationen, fordi den forklarer, hvordan brugeren kommer fra appens hovedområder og ind i create- og detail-skærmene.
 
 ### Tale-kort 2: Routing og navigation
 
-Routing er bygget med Expo Router, hvor filstrukturen i `app`-mappen definerer vores routes.
+Routing er bygget med Expo Router, hvor filstrukturen i `app`-mappen definerer appens routes.
 
 I vores root layout bruger vi Stack navigation til de overordnede flows.
 
@@ -114,21 +114,15 @@ flowchart TD
   Moments ~~~ Detail
 ```
 
-
+Når navigationen er på plads, giver det mening at kigge på data-modellen bag flowet. For når brugeren opretter et Moment, er det ikke kun en skærm der åbner; der bliver også skrevet data til Supabase.
 
 ### Tale-kort 3: Data og backend
 
-Kode at vise:
-
-- `components/MomentForm.tsx:110` - `submitMoment`
-- `hooks/useMoments.ts:198` - `useCreateMomentMutation`
-- `services/moments.ts:259` - `createMoment`
-
-Data-flowet er delt op i layers: screen binder navigation sammen, UI components håndterer forms og billeder, hooks styrer state og mutations, og services taler med Supabase.
+Data-flowet er delt op i layers. Screen binder navigation sammen, UI components håndterer forms og billeder, hooks styrer state og mutations, og services taler med Supabase.
 
 Supabase bruges til Auth, Database og Storage. Den aktive Space bestemmer `group_id`, så Moments og billeder bliver scoped til den rigtige Space.
 
-Billedfilen ligger i Storage. Databasen gemmer Momentet og photo metadata, blandt andet `storage_path`.
+Billedfilen ligger i Storage. Databasen gemmer Momentet og photo metadata, blandt andet `storage_path`, som peger på filen.
 
 ```mermaid
 erDiagram
@@ -158,7 +152,7 @@ erDiagram
 
 
 
-Pointen er, at UI'et ikke behøver kende detaljerne om Supabase. Det får data gennem hooks, mens services håndterer backend logic.
+Pointen er, at UI'et ikke behøver kende detaljerne om Supabase. Det får data gennem hooks, mens services håndterer backend-logikken.
 
 ```mermaid
 flowchart LR
@@ -170,11 +164,13 @@ flowchart LR
   Service --> Hook --> UI --> Screen
 ```
 
+Med den routing og datamodel på plads kan jeg nu vise samme flow i appen, som brugeren faktisk oplever det.
+
 
 
 ### Tale-kort 4: Demo af Moments
 
-Nu viser jeg det samme flow i appen.
+Nu viser jeg Moment-flowet i appen.
 
 Jeg starter i Moments for den valgte Space, trykker på plus-knappen og kommer til `moments/new`.
 
@@ -192,7 +188,7 @@ Når Momentet gemmes, bliver Moment-data gemt i databasen, billedmetadata gemmes
 
 Nu har jeg vist Moment-flowet udefra, som brugeren oplever det.
 
-Nu viser jeg det samme flow indefra i koden: først håndterer UI'et billedvalg, så styrer en hook upload state, så uploader en service selve filen til Supabase Storage, og til sidst gemmer Moment-servicen database-rækkerne i Supabase.
+Nu skifter jeg til koden og viser det samme flow indefra: først håndterer UI'et billedvalg, så styrer en hook upload state, så uploader en service selve filen til Supabase Storage, og til sidst gemmer Moment-servicen database-rækkerne i Supabase.
 
 ### Tale-kort 5: Implementering i kode
 
@@ -215,7 +211,9 @@ Så viser jeg `uploadEntityImage` i `imageUpload` servicen. Det er selve filuplo
 
 Til sidst viser jeg `createMoment` i `services/moments.ts`. Formen kalder denne mutation, når brugeren trykker Save. Her bliver Momentet gemt i `moments`, billedmetadata gemmes i `photos`, og relationen mellem Moment og billeder gemmes i `moment_photos`.
 
-Så flowet er: UI vælger billeder, hook styrer upload state, Storage-servicen uploader filen, og Moment-servicen gemmer database-rækkerne med de færdige Storage paths.
+Så den korte opsummering er: UI vælger billeder, hook styrer upload state, Storage-servicen uploader filen, og Moment-servicen gemmer database-rækkerne med de færdige Storage paths.
+
+Det er derfor Moments er mit centrale eksempel: det samler app i aktion, native mobiloplevelse, routing, kodeimplementering og Supabase i ét samlet flow.
 
 ## 5-Minute Structure
 
@@ -307,4 +305,3 @@ Keep these four points and cut everything else:
 ## Short Version To Memorize
 
 > I chose Moments because it shows the complete mobile data flow in a focused way. The user selects a Space, creates a Moment, picks a photo through Expo's native image picker, the image is compressed and uploaded to Supabase Storage, and metadata is saved in Supabase tables. Expo Router handles tabs, modal create screens and detail screens, while React Query keeps the UI responsive through mutations, optimistic updates and invalidation.
-
