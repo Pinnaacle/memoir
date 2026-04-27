@@ -69,22 +69,3 @@ flowchart LR
 
   Service --> Hook --> UI --> Screen
 ```
-
-
-
-## Moment Image Flow
-
-```mermaid
-flowchart LR
-  Picker["AddImageField\nhandleAddImages"]
-  UploadState["useImageUpload\nstartUpload"]
-  Storage["imageUpload\nuploadEntityImage"]
-  Database["moments service\ncreateMoment"]
-
-  Picker --> UploadState
-  UploadState --> Storage
-  Storage --> Database
-```
-
-
-
