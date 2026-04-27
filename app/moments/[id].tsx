@@ -35,6 +35,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FALLBACK_COVER_IMAGE = require('../../assets/images/fallbackImage.png');
 
@@ -127,7 +128,9 @@ function getMomentPhotoValues(moment: {
 }
 
 export default function MomentDetailScreen() {
+  const insets = useSafeAreaInsets();
   const { activeGroup, isLoading: isLoadingGroups } = useActiveGroup();
+  const activeGroupId = activeGroup?.id ?? null;
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
   const momentId = Array.isArray(rawId) ? rawId[0] : rawId;
@@ -141,9 +144,10 @@ export default function MomentDetailScreen() {
   const updateMomentMutation = useUpdateMomentMutation();
   const { startUpload } = useImageUpload({
     bucket: 'moments',
+    groupId: activeGroupId,
     setImages: setPhotos,
   });
-  const momentQuery = useMomentDetailQuery(momentId, activeGroup?.id);
+  const momentQuery = useMomentDetailQuery(momentId, activeGroupId);
   const moment = momentQuery.data;
   const momentPhotoKey = getPhotoKey(moment?.photos ?? []);
   const uploadedPhotoKey = getPhotoKey(getUploadedPhotos(photos));
@@ -231,7 +235,7 @@ export default function MomentDetailScreen() {
 
   const savePhotos = useCallback(
     async (nextPhotos: SelectedImage[]) => {
-      if (!momentId || !activeGroup?.id || !moment) {
+      if (!momentId || !activeGroupId || !moment) {
         return false;
       }
 
@@ -249,7 +253,7 @@ export default function MomentDetailScreen() {
       try {
         await updateMomentMutation.mutateAsync({
           momentId,
-          groupId: activeGroup.id,
+          groupId: activeGroupId,
           ...getMomentPhotoValues(moment),
           photos: uploadedPhotos,
         });
@@ -261,7 +265,7 @@ export default function MomentDetailScreen() {
         return false;
       }
     },
-    [activeGroup?.id, moment, momentId, momentPhotoKey, updateMomentMutation],
+    [activeGroupId, moment, momentId, momentPhotoKey, updateMomentMutation],
   );
 
   useEffect(() => {
@@ -339,7 +343,7 @@ export default function MomentDetailScreen() {
   }
 
   const removeMoment = async () => {
-    if (!momentId || !activeGroup?.id) {
+    if (!momentId || !activeGroupId) {
       return;
     }
 
@@ -347,7 +351,7 @@ export default function MomentDetailScreen() {
       await triggerDestructiveFeedback();
       await deleteMomentMutation.mutateAsync({
         momentId,
-        groupId: activeGroup.id,
+        groupId: activeGroupId,
       });
       void triggerSuccessFeedback();
       router.back();
@@ -374,7 +378,7 @@ export default function MomentDetailScreen() {
   const handleDelete = () => {
     setIsMenuOpen(false);
 
-    if (!momentId || !activeGroup?.id || isMutatingMoment) {
+    if (!momentId || !activeGroupId || isMutatingMoment) {
       return;
     }
 
@@ -515,11 +519,15 @@ export default function MomentDetailScreen() {
         </View>
       </ScrollView>
 
-      <View pointerEvents="box-none" style={styles.topButtons}>
+      <View
+        pointerEvents="box-none"
+        style={[styles.topButtons, { top: insets.top + space.md }]}
+      >
         <Pressable
           accessibilityHint="Returns to the moments list"
           accessibilityLabel="Go back"
           accessibilityRole="button"
+          hitSlop={space.sm}
           onPress={() => router.back()}
           style={styles.backButton}
         >
@@ -531,6 +539,7 @@ export default function MomentDetailScreen() {
           accessibilityLabel="More options"
           accessibilityRole="button"
           disabled={isMutatingMoment}
+          hitSlop={space.sm}
           onPress={() => {
             void triggerTapFeedback();
             setIsMenuOpen(true);
@@ -592,7 +601,6 @@ const styles = StyleSheet.create({
     left: 0,
     position: 'absolute',
     right: 0,
-    top: 60,
     zIndex: 1,
   },
   backButton: {
@@ -601,11 +609,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: radius.full,
     borderWidth: 1,
-    height: 40,
+    height: 44,
     justifyContent: 'center',
     left: space.lg,
     position: 'absolute',
-    width: 40,
+    width: 44,
   },
   menuButton: {
     alignItems: 'center',
@@ -613,11 +621,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: radius.full,
     borderWidth: 1,
-    height: 40,
+    height: 44,
     justifyContent: 'center',
     position: 'absolute',
     right: space.lg,
-    width: 40,
+    width: 44,
   },
   menuButtonDisabled: {
     opacity: 0.45,

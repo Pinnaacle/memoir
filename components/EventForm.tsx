@@ -106,6 +106,7 @@ export default function EventForm({
     submitError,
     uploadedPhotos,
   } = useEntryForm({
+    activeGroupId,
     bucket: 'events',
     initialPhotos,
     onSaved: () => router.back(),

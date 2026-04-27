@@ -12,7 +12,6 @@ import { useEntryForm } from '@/hooks/useEntryForm';
 import {
   type CreateMomentMutationInput,
   useCreateMomentMutation,
-  type UpdateMomentMutationInput,
   useUpdateMomentMutation,
 } from '@/hooks/useMoments';
 import { triggerSelectionFeedback } from '@/lib/interaction';
@@ -100,25 +99,23 @@ export default function MomentForm({
         throw new Error('Choose a space before saving this moment.');
       }
 
-      const optimistic = getOptimisticMomentData(photos);
+      // Uploads are done here; the mutation gets values and Storage paths.
+      const input: CreateMomentMutationInput = {
+        ...parsed.data,
+        groupId: activeGroupId,
+        optimistic: getOptimisticMomentData(photos),
+        photos: uploadedPhotos,
+      };
 
       if (isEdit && momentId) {
         await updateMomentMutation.mutateAsync({
           momentId,
-          ...parsed.data,
-          groupId: activeGroupId,
-          optimistic,
-          photos: uploadedPhotos,
-        } satisfies UpdateMomentMutationInput);
+          ...input,
+        });
         return;
       }
 
-      await createMomentMutation.mutateAsync({
-        ...parsed.data,
-        groupId: activeGroupId,
-        optimistic,
-        photos: uploadedPhotos,
-      } satisfies CreateMomentMutationInput);
+      await createMomentMutation.mutateAsync(input);
     },
   });
   const {
@@ -135,6 +132,7 @@ export default function MomentForm({
     submitError,
     uploadedPhotos,
   } = useEntryForm({
+    activeGroupId,
     bucket: 'moments',
     initialPhotos,
     onSaved: () => router.back(),

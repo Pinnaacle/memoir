@@ -123,6 +123,7 @@ function getEventPhotoValues(event: {
 
 export default function EventDetailScreen() {
   const { activeGroup, isLoading: isLoadingGroups } = useActiveGroup();
+  const activeGroupId = activeGroup?.id ?? null;
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const rawId = params.id;
   const eventId = Array.isArray(rawId) ? rawId[0] : rawId;
@@ -136,9 +137,10 @@ export default function EventDetailScreen() {
   const updateEventMutation = useUpdateEventMutation();
   const { startUpload } = useImageUpload({
     bucket: 'events',
+    groupId: activeGroupId,
     setImages: setPhotos,
   });
-  const eventQuery = useEventDetailQuery(eventId, activeGroup?.id);
+  const eventQuery = useEventDetailQuery(eventId, activeGroupId);
   const event = eventQuery.data;
   const eventPhotoKey = getPhotoKey(event?.photos ?? []);
   const uploadedPhotoKey = getPhotoKey(getUploadedPhotos(photos));
@@ -226,7 +228,7 @@ export default function EventDetailScreen() {
 
   const savePhotos = useCallback(
     async (nextPhotos: SelectedImage[]) => {
-      if (!eventId || !activeGroup?.id || !event) {
+      if (!eventId || !activeGroupId || !event) {
         return false;
       }
 
@@ -244,7 +246,7 @@ export default function EventDetailScreen() {
       try {
         await updateEventMutation.mutateAsync({
           eventId,
-          groupId: activeGroup.id,
+          groupId: activeGroupId,
           ...getEventPhotoValues(event),
           photos: uploadedPhotos,
         });
@@ -256,7 +258,7 @@ export default function EventDetailScreen() {
         return false;
       }
     },
-    [activeGroup?.id, event, eventId, eventPhotoKey, updateEventMutation],
+    [activeGroupId, event, eventId, eventPhotoKey, updateEventMutation],
   );
 
   useEffect(() => {
@@ -334,7 +336,7 @@ export default function EventDetailScreen() {
   }
 
   const removeEvent = async () => {
-    if (!eventId || !activeGroup?.id) {
+    if (!eventId || !activeGroupId) {
       return;
     }
 
@@ -342,7 +344,7 @@ export default function EventDetailScreen() {
       await triggerDestructiveFeedback();
       await deleteEventMutation.mutateAsync({
         eventId,
-        groupId: activeGroup.id,
+        groupId: activeGroupId,
       });
       void triggerSuccessFeedback();
       router.back();
@@ -369,7 +371,7 @@ export default function EventDetailScreen() {
   const handleDelete = () => {
     setIsMenuOpen(false);
 
-    if (!eventId || !activeGroup?.id || isMutatingEvent) {
+    if (!eventId || !activeGroupId || isMutatingEvent) {
       return;
     }
 

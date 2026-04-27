@@ -1,7 +1,7 @@
 import type { SelectedImage } from '@/components/ui/AddImageField';
 import type { ImageBucket } from '@/lib/images';
 import {
-  getCurrentUploadContext,
+  getUploadContextForGroup,
   uploadEntityImage,
   type UploadedImage,
 } from '@/services/imageUpload';
@@ -13,6 +13,7 @@ type SetImages = (
 ) => void;
 
 type UseImageUploadArgs = {
+  groupId: string | null;
   bucket: ImageBucket;
   setImages: SetImages;
 };
@@ -30,10 +31,15 @@ export type UploadBatchResult = {
 };
 
 export const imageUploadKeys = {
-  context: ['image-upload', 'context'] as const,
+  context: (groupId: string | null) =>
+    ['image-upload', 'context', groupId ?? 'no-group'] as const,
 };
 
-export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
+export function useImageUpload({
+  bucket,
+  groupId,
+  setImages,
+}: UseImageUploadArgs) {
   const queryClient = useQueryClient();
 
   const { mutateAsync } = useMutation<UploadedImage, Error, UploadVariables>({
@@ -50,28 +56,29 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
   const ensureContext = useCallback(
     () =>
       queryClient.ensureQueryData({
-        queryKey: imageUploadKeys.context,
-        queryFn: getCurrentUploadContext,
+        queryKey: imageUploadKeys.context(groupId),
+        queryFn: () => getUploadContextForGroup(groupId),
         staleTime: Infinity,
       }),
-    [queryClient],
+    [groupId, queryClient],
   );
 
   const startUpload = useCallback(
     async (newImages: SelectedImage[]): Promise<UploadBatchResult> => {
-      const failedIds: string[] = [];
-      const uploadedIds: string[] = [];
+      const result: UploadBatchResult = {
+        failedIds: [],
+        uploadedIds: [],
+      };
 
       if (newImages.length === 0) {
-        return {
-          failedIds,
-          uploadedIds,
-        };
+        return result;
       }
+
+      const imageIds = new Set(newImages.map((image) => image.id));
 
       setImages((current) =>
         current.map((image) =>
-          newImages.some((picked) => picked.id === image.id)
+          imageIds.has(image.id)
             ? { ...image, uploadStatus: 'uploading', uploadError: null }
             : image,
         ),
@@ -80,25 +87,25 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
       let context: UploadContext;
 
       try {
+        // Active Space keeps Storage paths aligned with database group_id rows.
         context = await ensureContext();
       } catch (error) {
-        queryClient.removeQueries({ queryKey: imageUploadKeys.context });
+        queryClient.removeQueries({
+          queryKey: imageUploadKeys.context(groupId),
+        });
         const message =
           error instanceof Error ? error.message : 'Could not prepare upload.';
 
         setImages((current) =>
           current.map((image) =>
-            newImages.some((picked) => picked.id === image.id)
+            imageIds.has(image.id)
               ? { ...image, uploadStatus: 'failed', uploadError: message }
               : image,
           ),
         );
-        failedIds.push(...newImages.map((image) => image.id));
+        result.failedIds.push(...newImages.map((image) => image.id));
 
-        return {
-          failedIds,
-          uploadedIds,
-        };
+        return result;
       }
 
       await Promise.all(
@@ -121,7 +128,7 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
                   : existing,
               ),
             );
-            uploadedIds.push(image.id);
+            result.uploadedIds.push(image.id);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : 'Upload failed.';
@@ -137,17 +144,14 @@ export function useImageUpload({ bucket, setImages }: UseImageUploadArgs) {
                   : existing,
               ),
             );
-            failedIds.push(image.id);
+            result.failedIds.push(image.id);
           }
         }),
       );
 
-      return {
-        failedIds,
-        uploadedIds,
-      };
+      return result;
     },
-    [ensureContext, mutateAsync, queryClient, setImages],
+    [ensureContext, groupId, mutateAsync, queryClient, setImages],
   );
 
   return { startUpload };

@@ -9,7 +9,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
-export { getCurrentUploadContext } from '@/services/userContext';
+export { getUploadContextForGroup } from '@/services/userContext';
 
 export type UploadedImage = {
   storagePath: string;
@@ -68,6 +68,7 @@ export async function uploadEntityImage({
     throw new Error('Unsupported image type.');
   }
 
+  // Compress first so Storage receives the smaller JPEG, not the original.
   const context = ImageManipulator.manipulate(image.uri);
   const resizeTarget = getResizeTarget(image.width, image.height);
 
@@ -94,6 +95,7 @@ export async function uploadEntityImage({
     throw new Error(`Image is still larger than ${mb} MB after compression.`);
   }
 
+  // Folder order: feature, Space, uploader, generated file id.
   const objectPath = `${IMAGE_BUCKET_FOLDERS[bucket]}/${groupId}/${userId}/${generateObjectId()}.${COMPRESSED_EXTENSION}`;
 
   const { error: uploadError } = await supabase.storage

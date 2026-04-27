@@ -31,50 +31,23 @@ export async function requireCurrentUserId(message: string): Promise<string> {
 }
 
 /**
- * Resolves the "personal" group id for the given user. Users may own more
- * than one group in the future; this helper picks the best candidate for
- * single-user writes.
+ * Pair of ids most uploads need: the current user and the currently selected
+ * group. Cached by the image upload hook via TanStack Query.
  */
-export async function getPersonalGroupIdForUser(
-  userId: string,
-): Promise<string> {
-  const { data: groups, error } = await supabase
-    .from('groups')
-    .select('id, name, group_kind, created_at')
-    .eq('personal_owner_user_id', userId)
-    .order('created_at', { ascending: true })
-    .order('id', { ascending: true });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const personalGroup =
-    groups?.find((group) => group.group_kind === 'personal') ??
-    groups?.find((group) => group.name?.toLowerCase() === 'personal') ??
-    groups?.[0];
-
-  if (!personalGroup?.id) {
-    throw new Error(
-      'No personal group found for this user. Create one before writing.',
-    );
-  }
-
-  return personalGroup.id;
-}
-
-/**
- * Pair of ids most writes need: the current user and their personal group.
- * Cached by the image upload hook via TanStack Query.
- */
-export async function getCurrentUploadContext(): Promise<{
+export async function getUploadContextForGroup(
+  groupId: string | null | undefined,
+): Promise<{
   userId: string;
   groupId: string;
 }> {
   const userId = await requireCurrentUserId(
     'You must be signed in to perform this action.',
   );
-  const groupId = await getPersonalGroupIdForUser(userId);
+
+  if (!groupId) {
+    throw new Error('Choose a space before uploading photos.');
+  }
+
   return { userId, groupId };
 }
 

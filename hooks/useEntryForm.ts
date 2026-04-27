@@ -16,6 +16,7 @@ import { useImageUpload } from './useImageUpload';
 const UPLOADING_STATES: ImageUploadStatus[] = ['local', 'uploading'];
 
 type UseEntryFormOptions = {
+  activeGroupId: string | null;
   bucket: ImageBucket;
   initialPhotos: SelectedImage[];
   onSaved: () => void;
@@ -43,6 +44,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export function useEntryForm({
+  activeGroupId,
   bucket,
   initialPhotos,
   onSaved,
@@ -55,6 +57,7 @@ export function useEntryForm({
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const { startUpload } = useImageUpload({
     bucket,
+    groupId: activeGroupId,
     setImages: setPhotos,
   });
   const isUploading = photos.some((photo) =>
