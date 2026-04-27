@@ -148,39 +148,63 @@ export function AddImageField({
     );
   }
 
+  function showPhotoLimitAlert() {
+    Alert.alert('Photo limit reached', `You can attach up to ${limit} photos.`);
+  }
+
+  function getImagesToAdd(pickedImages: SelectedImage[]) {
+    return getNewImages(images, pickedImages).slice(0, slotsLeft);
+  }
+
+
+
+
   async function handleAddImages() {
+    // 1. Only editable fields can open the image picker.
     if (!isEditable || !onChange || isDisabled) {
       return;
     }
 
+    // 2. Respect the maximum number of images for this form.
     if (!canAddMore) {
-      Alert.alert(
-        'Photo limit reached',
-        `You can attach up to ${limit} photos.`,
-      );
+      showPhotoLimitAlert();
       return;
     }
 
+    // 3. Open Expo's native image picker.
     setIsPicking(true);
 
-    const picked = await pickImagesFromLibrary({
-      allowsMultipleSelection: allowsMultipleSelection && slotsLeft > 1,
-      selectionLimit: slotsLeft,
-    });
+    try {
+      const picked = await pickImagesFromLibrary({
+        allowsMultipleSelection: allowsMultipleSelection && slotsLeft > 1,
+        selectionLimit: slotsLeft,
+      });
 
-    if (picked.didFail) {
-      Alert.alert('Could not open photos');
-    } else {
-      const added = getNewImages(images, picked.images).slice(0, slotsLeft);
-
-      if (added.length > 0) {
-        onChange([...images, ...added]);
-        onRequestUpload?.(added);
+      if (picked.didFail) {
+        Alert.alert('Could not open photos');
+        return;
       }
-    }
 
-    setIsPicking(false);
+      // 4. Ignore duplicate images and anything over the limit.
+      const addedImages = getImagesToAdd(picked.images);
+
+      if (addedImages.length === 0) {
+        return;
+      }
+
+      // 5. Update the preview immediately.
+      const nextImages = [...images, ...addedImages];
+      onChange(nextImages);
+
+      // 6. Let the parent hook start uploading the new images.
+      onRequestUpload?.(addedImages);
+    } finally {
+      setIsPicking(false);
+    }
   }
+
+
+
 
   function handleOpenViewer(index: number) {
     if (!images[index]) {

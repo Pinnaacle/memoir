@@ -58,56 +58,74 @@ function getResizeTarget(
     : { height: COMPRESSED_MAX_EDGE };
 }
 
-export async function uploadEntityImage({
-  image,
+function getStoragePath({
   bucket,
   groupId,
   userId,
-}: UploadImageArgs): Promise<UploadedImage> {
+}: Omit<UploadImageArgs, 'image'>) {
+  return `${IMAGE_BUCKET_FOLDERS[bucket]}/${groupId}/${userId}/${generateObjectId()}.${COMPRESSED_EXTENSION}`;
+}
+
+function assertAllowedImageType(image: SelectedImage) {
   if (!isAllowedMimeType(image.mimeType)) {
     throw new Error('Unsupported image type.');
   }
+}
 
-  // Compress first so Storage receives the smaller JPEG, not the original.
-  const context = ImageManipulator.manipulate(image.uri);
+
+
+
+export async function uploadEntityImage(
+  args: UploadImageArgs,
+): Promise<UploadedImage> {
+  const { image } = args;
+
+  // 1. Reject file types this app does not support.
+  assertAllowedImageType(image);
+
+  // 2. Resize large images before saving them as JPEG.
+  const manipulator = ImageManipulator.manipulate(image.uri);
   const resizeTarget = getResizeTarget(image.width, image.height);
 
   if (resizeTarget) {
-    context.resize(resizeTarget);
+    manipulator.resize(resizeTarget);
   }
 
-  const rendered = await context.renderAsync();
-  const compressed = await rendered.saveAsync({
+  const renderedImage = await manipulator.renderAsync();
+  const compressedImage = await renderedImage.saveAsync({
     compress: COMPRESSED_QUALITY,
     format: SaveFormat.JPEG,
   });
 
-  const response = await fetch(compressed.uri);
+  // 3. Read the compressed file into data Supabase can upload.
+  const response = await fetch(compressedImage.uri);
 
   if (!response.ok) {
     throw new Error('Could not read compressed image.');
   }
 
-  const arrayBuffer = await response.arrayBuffer();
+  const imageFile = await response.arrayBuffer();
 
-  if (arrayBuffer.byteLength > MAX_UPLOAD_BYTES) {
+  // 4. Stop if compression still left the image too large.
+  if (imageFile.byteLength > MAX_UPLOAD_BYTES) {
     const mb = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
     throw new Error(`Image is still larger than ${mb} MB after compression.`);
   }
 
-  // Folder order: feature, Space, uploader, generated file id.
-  const objectPath = `${IMAGE_BUCKET_FOLDERS[bucket]}/${groupId}/${userId}/${generateObjectId()}.${COMPRESSED_EXTENSION}`;
-
-  const { error: uploadError } = await supabase.storage
+  // 5. Upload the final JPEG to Supabase Storage.
+  const storagePath = getStoragePath(args);
+  const { error } = await supabase.storage
     .from(IMAGE_BUCKET_ID)
-    .upload(objectPath, arrayBuffer, {
+    .upload(storagePath, imageFile, {
       contentType: COMPRESSED_MIME,
       upsert: false,
     });
 
-  if (uploadError) {
-    throw new Error(uploadError.message);
+  if (error) {
+    throw new Error(error.message);
   }
 
-  return { storagePath: objectPath };
+  return { storagePath };
 }
+
+

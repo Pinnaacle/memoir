@@ -107,27 +107,42 @@ export default function MomentForm({
     saveErrorMessage: 'Failed to save moment. Please try again.',
   });
 
+
+
+
   async function submitMoment(value: CreateMomentValues) {
+    // 1. Validate the form values before they reach Supabase.
     const parsed = createMomentSchema.safeParse(value);
 
     if (!parsed.success) {
       throw new Error(parsed.error.issues[0]?.message ?? 'Invalid input.');
     }
 
+    // 2. A Moment always belongs to the active Space.
     if (!activeGroupId) {
       throw new Error('Choose a space before saving this moment.');
     }
 
+    // 3. Keep the image data separate from the text fields.
+    const momentValues = parsed.data;
+    const groupId = activeGroupId;
+    const optimisticImages = getOptimisticMomentData(photos);
+    const savedImageRows = uploadedPhotos;
+
+    // 4. Build the exact payload expected by the mutation.
     const input: CreateMomentMutationInput = {
-      ...parsed.data,
-      groupId: activeGroupId,
-      optimistic: getOptimisticMomentData(photos),
-      photos: uploadedPhotos,
+      ...momentValues,
+      groupId,
+      optimistic: optimisticImages,
+      photos: savedImageRows,
     };
 
-    if (isEdit && momentId) {
+    // 5. The same form handles both creating and editing.
+    const shouldUpdateMoment = isEdit && Boolean(momentId);
+
+    if (shouldUpdateMoment) {
       await updateMomentMutation.mutateAsync({
-        momentId,
+        momentId: momentId!,
         ...input,
       });
       return;
@@ -135,6 +150,9 @@ export default function MomentForm({
 
     await createMomentMutation.mutateAsync(input);
   }
+
+
+
 
   const form = useForm({
     defaultValues: initialValues,

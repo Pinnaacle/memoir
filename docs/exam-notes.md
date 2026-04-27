@@ -283,24 +283,24 @@ Når Momentet gemmes, bliver Moment-data gemt i databasen, billedmetadata gemmes
 
 Kode at vise:
 
-- `components/MomentForm.tsx:110` - `submitMoment`
-- `components/ui/AddImageField.tsx:151` - `handleAddImages`
-- `hooks/useImageUpload.ts:66` - `startUpload`
-- `services/imageUpload.ts:61` - `uploadEntityImage`
+- `components/ui/AddImageField.tsx:162` - `handleAddImages`
+- `hooks/useImageUpload.ts:130` - `startUpload`
+- `services/imageUpload.ts:78` - `uploadEntityImage`
+- `components/MomentForm.tsx:113` - `submitMoment`
 
-I koden følger jeg samme opdeling som i data-flowet: screen, component, hook og service.
+I koden viser jeg flowet i samme rækkefølge som brugeren oplever det: først vælger man et billede, så uploader appen billedet, og til sidst gemmer man Momentet.
 
-`MomentForm` samler formularens values og submitter kun billeder, der allerede har fået en `storagePath`.
+Først viser jeg `handleAddImages` i `AddImageField`. Den tjekker om feltet kan redigeres, åbner Expo ImagePicker, filtrerer dubletter og opdaterer previewet med det samme.
 
-`AddImageField` håndterer image UI'et: picker, preview og fullscreen viewer.
+Når previewet er opdateret, kalder componenten upload-callbacket med de nye billeder.
 
-`useImageUpload` styrer upload state, så et billede kan være `local`, `uploading`, `uploaded` eller `failed`.
+Derefter viser jeg `startUpload` i `useImageUpload`. Den markerer billederne som `uploading`, henter user og Space context og uploader hvert billede. Efter upload bliver hvert billede enten `uploaded` eller `failed`.
 
-`imageUpload` servicen komprimerer billedet med Expo ImageManipulator og uploader filen til Supabase Storage.
+Så viser jeg `uploadEntityImage` i `imageUpload` servicen. Det er selve filuploadet: den validerer billedtypen, komprimerer billedet med Expo ImageManipulator, tjekker filstørrelsen og uploader JPEG-filen til Supabase Storage.
 
-Til sidst bruger `createMoment` i `services/moments.ts` de færdig-uploadede `storagePath`s til at oprette Momentet og gemme photo metadata.
+Til sidst viser jeg `submitMoment` i `MomentForm`. Her bliver formularen valideret, Moment-payloadet bliver bygget, og kun billeder med færdige `storagePath`s bliver sendt med til backend.
 
-Så screen og components viser flowet, hooks styrer state, og services håndterer Supabase og file upload.
+Så flowet er: UI vælger billeder, hook styrer upload state, service uploader filen, og formen gemmer Momentet med de færdige Storage paths.
 
 ## 5-Minute Structure
 
@@ -384,23 +384,23 @@ Show only the central code path:
 
 Show:
 
-- `submitMoment` in `components/MomentForm.tsx`
 - `handleAddImages` in `components/ui/AddImageField.tsx`
 - `startUpload` in `hooks/useImageUpload.ts`
 - `uploadEntityImage` in `services/imageUpload.ts`
+- `submitMoment` in `components/MomentForm.tsx`
 - `createMoment` in `services/moments.ts`
 
 Explain the flow:
 
-1. `MomentForm` validates the form and submits uploaded `storagePath`s.
-2. `AddImageField` creates local image objects from ImagePicker results.
-3. `useImageUpload` changes each image between `local`, `uploading`, `uploaded` and `failed`.
-4. `uploadEntityImage` compresses the image and uploads it to Storage.
+1. `AddImageField` opens the native picker and adds selected images to the preview.
+2. `useImageUpload` changes each image between `local`, `uploading`, `uploaded` and `failed`.
+3. `uploadEntityImage` compresses the image and uploads it to Storage.
+4. `MomentForm` validates the form and submits uploaded `storagePath`s.
 5. `createMoment` writes the Moment row and photo metadata, while Storage handles the file.
 
 Say:
 
-> The screen does not do everything itself. Components handle UI, hooks handle state and flow, and services handle Supabase and file upload.
+> The code follows the user flow: pick images, upload images, then save the Moment with the uploaded Storage paths.
 
 ## 24-Hour Work Plan
 

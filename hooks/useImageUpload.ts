@@ -6,7 +6,6 @@ import {
   type UploadedImage,
 } from '@/services/imageUpload';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
 
 type SetImages = (
   updater: (current: SelectedImage[]) => SelectedImage[],
@@ -35,6 +34,21 @@ export const imageUploadKeys = {
     ['image-upload', 'context', groupId ?? 'no-group'] as const,
 };
 
+function createUploadResult(): UploadBatchResult {
+  return {
+    failedIds: [],
+    uploadedIds: [],
+  };
+}
+
+function getImageIds(images: SelectedImage[]) {
+  return new Set(images.map((image) => image.id));
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function useImageUpload({
   bucket,
   groupId,
@@ -53,106 +67,108 @@ export function useImageUpload({
     retry: 1,
   });
 
-  const ensureContext = useCallback(
-    () =>
-      queryClient.ensureQueryData({
+  function ensureContext() {
+    return queryClient.ensureQueryData({
+      queryKey: imageUploadKeys.context(groupId),
+      queryFn: () => getUploadContextForGroup(groupId),
+      staleTime: Infinity,
+    });
+  }
+
+  function updateImages(
+    imageIds: Set<string>,
+    changes: Partial<SelectedImage>,
+  ) {
+    setImages((current) =>
+      current.map((image) =>
+        imageIds.has(image.id) ? { ...image, ...changes } : image,
+      ),
+    );
+  }
+
+  function updateImage(imageId: string, changes: Partial<SelectedImage>) {
+    setImages((current) =>
+      current.map((image) =>
+        image.id === imageId ? { ...image, ...changes } : image,
+      ),
+    );
+  }
+
+  function markImagesAsUploading(images: SelectedImage[]) {
+    updateImages(getImageIds(images), {
+      uploadStatus: 'uploading',
+      uploadError: null,
+    });
+  }
+
+  async function uploadOneImage(
+    image: SelectedImage,
+    context: UploadContext,
+    result: UploadBatchResult,
+  ) {
+    try {
+      const uploaded = await mutateAsync({ image, context });
+
+      updateImage(image.id, {
+        storagePath: uploaded.storagePath,
+        uploadStatus: 'uploaded',
+        uploadError: null,
+      });
+      result.uploadedIds.push(image.id);
+    } catch (error) {
+      updateImage(image.id, {
+        uploadStatus: 'failed',
+        uploadError: getErrorMessage(error, 'Upload failed.'),
+      });
+      result.failedIds.push(image.id);
+    }
+  }
+
+
+
+
+  async function startUpload(
+    newImages: SelectedImage[],
+  ): Promise<UploadBatchResult> {
+    // 1. Track which images succeed and which ones fail.
+    const result = createUploadResult();
+
+    if (newImages.length === 0) {
+      return result;
+    }
+
+    // 2. Show upload progress in the UI right away.
+    const imageIds = getImageIds(newImages);
+    markImagesAsUploading(newImages);
+
+    // 3. Get the user and Space used in the Storage path.
+    let context: UploadContext;
+
+    try {
+      context = await ensureContext();
+    } catch (error) {
+      queryClient.removeQueries({
         queryKey: imageUploadKeys.context(groupId),
-        queryFn: () => getUploadContextForGroup(groupId),
-        staleTime: Infinity,
-      }),
-    [groupId, queryClient],
-  );
+      });
 
-  const startUpload = useCallback(
-    async (newImages: SelectedImage[]): Promise<UploadBatchResult> => {
-      const result: UploadBatchResult = {
-        failedIds: [],
-        uploadedIds: [],
-      };
+      updateImages(imageIds, {
+        uploadStatus: 'failed',
+        uploadError: getErrorMessage(error, 'Could not prepare upload.'),
+      });
 
-      if (newImages.length === 0) {
-        return result;
-      }
-
-      const imageIds = new Set(newImages.map((image) => image.id));
-
-      setImages((current) =>
-        current.map((image) =>
-          imageIds.has(image.id)
-            ? { ...image, uploadStatus: 'uploading', uploadError: null }
-            : image,
-        ),
-      );
-
-      let context: UploadContext;
-
-      try {
-        // Active Space keeps Storage paths aligned with database group_id rows.
-        context = await ensureContext();
-      } catch (error) {
-        queryClient.removeQueries({
-          queryKey: imageUploadKeys.context(groupId),
-        });
-        const message =
-          error instanceof Error ? error.message : 'Could not prepare upload.';
-
-        setImages((current) =>
-          current.map((image) =>
-            imageIds.has(image.id)
-              ? { ...image, uploadStatus: 'failed', uploadError: message }
-              : image,
-          ),
-        );
-        result.failedIds.push(...newImages.map((image) => image.id));
-
-        return result;
-      }
-
-      await Promise.all(
-        newImages.map(async (image) => {
-          try {
-            const uploaded = await mutateAsync({
-              image,
-              context,
-            });
-
-            setImages((current) =>
-              current.map((existing) =>
-                existing.id === image.id
-                  ? {
-                      ...existing,
-                      storagePath: uploaded.storagePath,
-                      uploadStatus: 'uploaded',
-                      uploadError: null,
-                    }
-                  : existing,
-              ),
-            );
-            result.uploadedIds.push(image.id);
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Upload failed.';
-
-            setImages((current) =>
-              current.map((existing) =>
-                existing.id === image.id
-                  ? {
-                      ...existing,
-                      uploadStatus: 'failed',
-                      uploadError: message,
-                    }
-                  : existing,
-              ),
-            );
-            result.failedIds.push(image.id);
-          }
-        }),
-      );
+      result.failedIds.push(...newImages.map((image) => image.id));
 
       return result;
-    },
-    [ensureContext, groupId, mutateAsync, queryClient, setImages],
-  );
+    }
+
+    // 4. Upload each selected image and update its status.
+    for (const image of newImages) {
+      await uploadOneImage(image, context, result);
+    }
+
+    // 5. The caller uses this result for retry and error UI.
+    return result;
+  }
 
   return { startUpload };
 }
