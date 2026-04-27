@@ -256,23 +256,31 @@ export async function listMomentsForGroup(
   });
 }
 
+
+
+
 export async function createMoment(input: CreateMomentInput): Promise<string> {
+  // 1. Check the basic rules before writing to Supabase.
   assertPhotoLimit(input.photos.length);
 
   const userId = await requireCurrentUserId(
     'You must be signed in to create a moment.',
   );
 
-  if (!input.groupId) {
+  const groupId = input.groupId;
+
+  if (!groupId) {
     throw new Error('A group must be selected before creating a moment.');
   }
 
-  const { data: moment, error: momentError } = await supabase
+  // 2. Create the actual Moment row.
+  const momentValues = getMomentValues(input);
+  const { data: insertedMoment, error: momentError } = await supabase
     .from('moments')
     .insert({
-      group_id: input.groupId,
+      group_id: groupId,
       created_by: userId,
-      ...getMomentValues(input),
+      ...momentValues,
     })
     .select('id')
     .single();
@@ -281,43 +289,51 @@ export async function createMoment(input: CreateMomentInput): Promise<string> {
     throw new Error(momentError.message);
   }
 
-  if (!moment?.id) {
+  if (!insertedMoment?.id) {
     throw new Error('Could not create moment.');
   }
 
+  // 3. Keep only valid, unique Storage paths from uploaded photos.
   const storagePaths = normalizePhotoPaths(input.photos);
 
   if (storagePaths.length === 0) {
-    return moment.id;
+    return insertedMoment.id;
   }
 
-  // Files live in Storage; metadata and order live in photos and moment_photos.
-  const photoIds = await insertPhotos(
-    input.groupId,
+  // 4. Store photo metadata in the photos table.
+  const photoIdsByPath = await insertPhotos(
+    groupId,
     userId,
     input.occurredAt,
     storagePaths,
   );
 
-  if (photoIds.size === 0) {
-    return moment.id;
+  if (photoIdsByPath.size === 0) {
+    return insertedMoment.id;
   }
 
-  const { error: linksError } = await supabase.from('moment_photos').insert(
-    storagePaths.map((storagePath, index) => ({
-      group_id: input.groupId,
-      moment_id: moment.id,
-      photo_id: photoIds.get(storagePath)!,
-      sort_order: index,
-    })),
-  );
+  // 5. Link the Moment row to its photos and preserve their order.
+  const momentPhotoLinks = storagePaths.map((storagePath, index) => ({
+    group_id: groupId,
+    moment_id: insertedMoment.id,
+    photo_id: photoIdsByPath.get(storagePath)!,
+    sort_order: index,
+  }));
+
+  const { error: linksError } = await supabase
+    .from('moment_photos')
+    .insert(momentPhotoLinks);
 
   if (linksError) {
     throw new Error(linksError.message);
   }
 
-  return moment.id;
+  // 6. Return the new id so the app can update caches/navigation.
+  return insertedMoment.id;
 }
+
+
+
 
 export async function updateMoment(input: UpdateMomentInput): Promise<string> {
   assertPhotoLimit(input.photos.length);
